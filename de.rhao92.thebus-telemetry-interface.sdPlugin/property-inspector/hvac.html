@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Rhao92’s The Bus Telemetry Interface – Klima</title>
+  <style>
+    :root { color-scheme: dark; font-family: Arial,Helvetica,sans-serif; font-size: 13px; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 16px; color: #f4f4f4; background: #2b2b2b; }
+    h1 { margin: 0 0 5px; color: #38c9ff; font-size: 15px; }
+    p { margin: 0 0 14px; color: #bdbdbd; line-height: 1.35; }
+    label { display: grid; grid-template-columns: 76px 1fr; gap: 10px; align-items: center; }
+    span { color: #c8c8c8; text-align: right; }
+    select { width: 100%; min-height: 32px; padding: 5px 8px; border: 1px solid #555; border-radius: 5px; color: #f4f4f4; background: #363636; }
+    select:focus { border-color: #38c9ff; outline: none; box-shadow: 0 0 0 1px rgb(56 201 255 / 35%); }
+  </style>
+</head>
+<body>
+  <h1>Klima</h1>
+  <p id="description">Wähle aus, welche Klimafunktion diese Taste übernimmt.</p>
+  <label for="mode"><span>Funktion</span><select id="mode"></select></label>
+  <script>
+    const HVAC_ACTION = "de.rhao92.thebus-telemetry-interface.hvac-control";
+    const HVAC_DIAL_ACTION = "de.rhao92.thebus-telemetry-interface.hvac-dial";
+    const keyModes = [
+      ["climate", "Klimaanlage Ein/Aus + Temperatur", "Bedienfeld-Tasten"],
+      ["ac-mode", "Heizen / Kühlen", "Bedienfeld-Tasten"],
+      ["rear", "Hintere Klimaanlage", "Bedienfeld-Tasten"],
+      ["circulation", "Luftzirkulation", "Bedienfeld-Tasten"],
+      ["circulation-front", "Vordere Luftzirkulation", "Bedienfeld-Tasten"],
+      ["ventilation", "Automatische Ventilation", "Bedienfeld-Tasten"],
+      ["temperature-up", "Temperatur +1 °C", "Regler als Taste"],
+      ["temperature-down", "Temperatur −1 °C", "Regler als Taste"],
+      ["fan", "Lüfter schneller", "Regler als Taste"],
+      ["fan-down", "Lüfter langsamer", "Regler als Taste"],
+      ["airflow-left", "Luftverteilung nach links", "Regler als Taste"],
+      ["airflow-right", "Luftverteilung nach rechts", "Regler als Taste"]
+    ];
+    const dialModes = [
+      ["temperature", "Temperaturregler"],
+      ["fan-speed", "Lüftergeschwindigkeit"],
+      ["airflow", "Luftverteilung"]
+    ];
+    const modeSelect = document.getElementById("mode");
+    const description = document.getElementById("description");
+    let websocket;
+    let context = "";
+    let contexts = [];
+    let actionUuid = HVAC_ACTION;
+    let settings = { mode: "climate" };
+    let pendingMode = null;
+
+    function isDial() {
+      return actionUuid === HVAC_DIAL_ACTION;
+    }
+
+    function validModes() {
+      return new Set((isDial() ? dialModes : keyModes).map((entry) => entry[0]));
+    }
+
+    function normalized(value) {
+      if (validModes().has(value)) return value;
+      return isDial() ? "temperature" : "climate";
+    }
+
+    function configureOptions() {
+      modeSelect.replaceChildren();
+      if (isDial()) {
+        for (const [value, label] of dialModes) {
+          const option = document.createElement("option");
+          option.value = value;
+          option.textContent = label;
+          modeSelect.append(option);
+        }
+        description.textContent = "Wähle aus, welchen Klimaregler der Stream-Deck-Plus-Drehknopf übernimmt.";
+        return;
+      }
+
+      let group;
+      let groupName = "";
+      for (const [value, label, category] of keyModes) {
+        if (category !== groupName) {
+          groupName = category;
+          group = document.createElement("optgroup");
+          group.label = category;
+          modeSelect.append(group);
+        }
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label;
+        group.append(option);
+      }
+      description.textContent = "Wähle aus, welche Klimafunktion diese Taste übernimmt.";
+    }
+
+    function showSelection() {
+      modeSelect.value = normalized(settings.mode);
+    }
+
+    function publish() {
+      if (websocket?.readyState !== WebSocket.OPEN || contexts.length === 0) return;
+
+      for (const targetContext of contexts) {
+        websocket.send(JSON.stringify({
+          event: "setSettings",
+          action: actionUuid,
+          context: targetContext,
+          payload: settings
+        }));
+        websocket.send(JSON.stringify({
+          event: "sendToPlugin",
+          action: actionUuid,
+          context: targetContext,
+          payload: { type: "modeChanged", mode: settings.mode, nonce: Date.now() }
+        }));
+      }
+    }
+
+    modeSelect.addEventListener("change", () => {
+      settings = { ...settings, mode: normalized(modeSelect.value) };
+      pendingMode = settings.mode;
+      showSelection();
+      publish();
+    });
+
+    function connectElgatoStreamDeckSocket(port, propertyInspectorUUID, registerEvent, info, actionInfo) {
+      let parsed = {};
+      try {
+        parsed = JSON.parse(actionInfo);
+        contexts = Array.from(new Set([
+          parsed?.context,
+          propertyInspectorUUID
+        ].filter((value) => typeof value === "string" && value.length > 0)));
+        context = parsed?.context || propertyInspectorUUID;
+        actionUuid = parsed?.action || HVAC_ACTION;
+        configureOptions();
+        settings = { ...(parsed?.payload?.settings ?? {}), mode: normalized(parsed?.payload?.settings?.mode) };
+      } catch {
+        contexts = [propertyInspectorUUID].filter(Boolean);
+        context = propertyInspectorUUID;
+        actionUuid = HVAC_ACTION;
+        configureOptions();
+        settings = { mode: "climate" };
+      }
+      showSelection();
+      websocket = new WebSocket(`ws://127.0.0.1:${port}`);
+      websocket.addEventListener("open", () => {
+        websocket.send(JSON.stringify({ event: registerEvent, uuid: propertyInspectorUUID }));
+
+        for (const targetContext of contexts) {
+          websocket.send(JSON.stringify({
+            event: "getSettings",
+            action: actionUuid,
+            context: targetContext
+          }));
+        }
+      });
+      websocket.addEventListener("message", (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          if (message.event !== "didReceiveSettings" || !contexts.includes(message.context)) {
+            return;
+          }
+
+          const received = {
+            ...(message.payload?.settings ?? {}),
+            mode: normalized(message.payload?.settings?.mode)
+          };
+
+          if (pendingMode !== null && received.mode !== pendingMode) {
+            return;
+          }
+
+          settings = received;
+          if (pendingMode === received.mode) {
+            pendingMode = null;
+          }
+          showSelection();
+        } catch {
+          // Unbekannte WebSocket-Nachrichten dürfen den Inspector nicht stoppen.
+        }
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "lib": ["ES2022", "DOM"],
+    "outDir": "../../tbp_214_11_navigation_qa",
+    "rootDir": "..",
+    "noImplicitOverride": true
+  },
+  "files": [
+    "navigation-regression.ts",
+    "../src/navigation/navigation-debug-recorder.ts",
+    "../src/navigation/route-guidance.ts",
+    "../src/navigation/navigation-renderer.ts",
+    "../src/fullpanel/fullpanel-renderer.ts",
+    "../src/fullpanel/types.ts",
+    "../src/core/offline-renderer.ts",
+    "../src/core/telemetry.ts",
+    "../src/core/refresh-registry.ts",
+    "../src/core/kneeling.ts",
+    "../src/core/vehicle-controls.ts",
+    "../src/core/vehicle-buttons.ts"
+  ]
+}

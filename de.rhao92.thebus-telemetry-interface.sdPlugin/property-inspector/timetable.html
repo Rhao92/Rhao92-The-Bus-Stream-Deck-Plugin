@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Rhao92’s The Bus Telemetry Interface – Fahrplan-Anzeige</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 13px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      color: #f4f4f4;
+      background: #2b2b2b;
+    }
+
+    h1 {
+      margin: 0 0 5px;
+      color: #8be34d;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    p {
+      margin: 0 0 14px;
+      color: #bdbdbd;
+      line-height: 1.35;
+    }
+
+    fieldset {
+      display: grid;
+      gap: 7px;
+      margin: 0;
+      padding: 0;
+      border: 0;
+    }
+
+    label {
+      display: flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 8px 10px;
+      border: 1px solid #4a4a4a;
+      border-radius: 6px;
+      background: #333;
+      cursor: pointer;
+    }
+
+    label:hover { border-color: #78d83a; }
+
+    label:has(input:checked) {
+      border-color: #78d83a;
+      background: #26351e;
+      box-shadow: 0 0 7px rgb(120 216 58 / 32%);
+    }
+
+    input {
+      margin: 0 9px 0 0;
+      accent-color: #78d83a;
+    }
+
+    strong { font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1>Fahrplan-Anzeige</h1>
+  <p>Wähle aus, was dieser Regler oder diese Taste anzeigen soll.</p>
+
+  <fieldset id="panel-options">
+    <label><input type="radio" name="kind" value="stop"><strong>Haltestelle</strong></label>
+    <label><input type="radio" name="kind" value="arrival"><strong>Ankunft</strong></label>
+    <label><input type="radio" name="kind" value="departure"><strong>Abfahrt</strong></label>
+    <label><input type="radio" name="kind" value="delta"><strong>Abweichung</strong></label>
+    <label><input type="radio" name="kind" value="ingame"><strong>Ingame-Zeit</strong></label>
+    <label><input type="radio" name="kind" value="status"><strong>Status</strong></label>
+  </fieldset>
+
+  <script>
+    const validKinds = new Set(["stop", "arrival", "departure", "delta", "ingame", "status"]);
+    let websocket;
+    let context;
+    let settings = { kind: "stop" };
+
+    function selectedKind(value) {
+      return validKinds.has(value) ? value : "stop";
+    }
+
+    function showSelection() {
+      const input = document.querySelector(`input[name="kind"][value="${selectedKind(settings.kind)}"]`);
+      if (input) input.checked = true;
+    }
+
+    function saveSelection(kind) {
+      settings = { ...settings, kind: selectedKind(kind) };
+      if (!websocket || websocket.readyState !== WebSocket.OPEN) return;
+      websocket.send(JSON.stringify({
+        event: "setSettings",
+        context,
+        payload: settings,
+      }));
+    }
+
+    document.querySelectorAll('input[name="kind"]').forEach((input) => {
+      input.addEventListener("change", () => {
+        if (input.checked) saveSelection(input.value);
+      });
+    });
+    showSelection();
+
+    function connectElgatoStreamDeckSocket(port, propertyInspectorUUID, registerEvent, info, actionInfo) {
+      context = propertyInspectorUUID;
+      try {
+        const parsed = JSON.parse(actionInfo);
+        settings = { ...(parsed?.payload?.settings ?? {}), kind: selectedKind(parsed?.payload?.settings?.kind) };
+      } catch {
+        settings = { kind: "stop" };
+      }
+      showSelection();
+
+      websocket = new WebSocket(`ws://127.0.0.1:${port}`);
+      websocket.addEventListener("open", () => {
+        websocket.send(JSON.stringify({ event: registerEvent, uuid: propertyInspectorUUID }));
+      });
+    }
+  </script>
+</body>
+</html>

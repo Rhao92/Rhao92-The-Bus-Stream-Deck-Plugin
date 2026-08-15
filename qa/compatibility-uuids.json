@@ -1,0 +1,32 @@
+{
+  "referenceVersion": "2.12.1.17",
+  "requiredActionUuids": [
+    "de.rhao92.thebus-telemetry-interface.stop-request",
+    "de.rhao92.thebus-telemetry-interface.door-control",
+    "de.rhao92.thebus-telemetry-interface.door-clearance",
+    "de.rhao92.thebus-telemetry-interface.automatic-door-closing",
+    "de.rhao92.thebus-telemetry-interface.gear-selector",
+    "de.rhao92.thebus-telemetry-interface.indicator-control",
+    "de.rhao92.thebus-telemetry-interface.ignition",
+    "de.rhao92.thebus-telemetry-interface.parking-brake",
+    "de.rhao92.thebus-telemetry-interface.kneeling-control",
+    "de.rhao92.thebus-telemetry-interface.ramp",
+    "de.rhao92.thebus-telemetry-interface.passenger-light-control",
+    "de.rhao92.thebus-telemetry-interface.gear-drive",
+    "de.rhao92.thebus-telemetry-interface.gear-neutral",
+    "de.rhao92.thebus-telemetry-interface.gear-reverse",
+    "de.rhao92.thebus-telemetry-interface.indicator-left",
+    "de.rhao92.thebus-telemetry-interface.indicator-right",
+    "de.rhao92.thebus-telemetry-interface.warning-lights",
+    "de.rhao92.thebus-telemetry-interface.all-doors",
+    "de.rhao92.thebus-telemetry-interface.door-1",
+    "de.rhao92.thebus-telemetry-interface.door-2",
+    "de.rhao92.thebus-telemetry-interface.door-3",
+    "de.rhao92.thebus-telemetry-interface.door-4",
+    "de.rhao92.thebus-telemetry-interface.kneeling",
+    "de.rhao92.thebus-telemetry-interface.automatic-kneeling",
+    "de.rhao92.thebus-telemetry-interface.passenger-lights",
+    "de.rhao92.thebus-telemetry-interface.passenger-lights-dim",
+    "de.rhao92.thebus-telemetry-interface.passenger-lights-bright"
+  ]
+}

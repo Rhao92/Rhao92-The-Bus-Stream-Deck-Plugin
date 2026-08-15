@@ -1,0 +1,10 @@
+node_modules/
+de.rhao92.thebus-telemetry-interface.sdPlugin/bin/
+*.streamDeckPlugin
+*.map
+*.log
+.DS_Store
+artifacts/
+release/
+qa-output/
+

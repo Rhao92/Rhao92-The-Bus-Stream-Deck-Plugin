@@ -1,0 +1,1039 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
+  "Name": "Rhao92’s The Bus Telemetry Interface",
+  "Version": "2.15.0.18",
+  "Author": "Rhao92",
+  "Actions": [
+    {
+      "Name": "Fullpanel",
+      "UUID": "de.rhao92.thebus-telemetry-interface.fullpanel",
+      "Icon": "imgs/actions/fullpanel/icon",
+      "Tooltip": "Vollbreiten-Dashboard für Fahrplan, Fahrzeug und Navigation auf allen vier Stream-Deck-Plus-Reglern.",
+      "Controllers": [
+        "Encoder"
+      ],
+      "Encoder": {
+        "Icon": "imgs/actions/fullpanel/encoder",
+        "layout": "layouts/touch-segment.json",
+        "StackColor": "#78D83A",
+        "TriggerDescription": {
+          "Rotate": "Regler testen",
+          "Push": "Dashboard wechseln oder STOP testen",
+          "Touch": "Dashboard wechseln"
+        }
+      },
+      "States": [
+        {
+          "Image": "imgs/actions/fullpanel/state"
+        }
+      ],
+      "UserTitleEnabled": false
+    },
+    {
+      "Name": "Fahrplan · Einzelpanel",
+      "UUID": "de.rhao92.thebus-telemetry-interface.timetable-panel",
+      "Icon": "imgs/actions/single-timetable/icon",
+      "Tooltip": "Eine gemeinsame Fahrplan-Action für Haltestelle, Ankunft, Abfahrt, Abweichung, Ingame-Zeit oder Status.",
+      "Controllers": [
+        "Encoder"
+      ],
+      "PropertyInspectorPath": "property-inspector/timetable.html",
+      "Encoder": {
+        "Icon": "imgs/actions/single-timetable/encoder",
+        "layout": "layouts/touch-segment.json",
+        "StackColor": "#78D83A",
+        "TriggerDescription": {
+          "Rotate": "Nur Anzeige",
+          "Push": "Nur Anzeige",
+          "Touch": "Nur Anzeige"
+        }
+      },
+      "States": [
+        {
+          "Image": "imgs/actions/single-timetable/state"
+        }
+      ],
+      "UserTitleEnabled": false
+    },
+    {
+      "Name": "Fahrplan · Button",
+      "UUID": "de.rhao92.thebus-telemetry-interface.timetable-button",
+      "Icon": "imgs/actions/key-timetable/action",
+      "Tooltip": "Eine gemeinsame Fahrplan-Taste für Haltestelle, Ankunft, Abfahrt, Abweichung, Ingame-Zeit oder Status.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "PropertyInspectorPath": "property-inspector/timetable.html",
+      "States": [
+        {
+          "Image": "imgs/actions/key-timetable/offline"
+        }
+      ],
+      "UserTitleEnabled": false
+    },
+    {
+      "Name": "Fahrplan · Haltewunsch",
+      "UUID": "de.rhao92.thebus-telemetry-interface.stop-request",
+      "Icon": "imgs/actions/stop-request/action",
+      "Tooltip": "Zeigt einen aktiven Haltewunsch telemetriebasiert mit 2-Hz-Blinken an.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/stop-request/offline"
+        },
+        {
+          "Image": "imgs/actions/stop-request/normal"
+        },
+        {
+          "Image": "imgs/actions/stop-request/active-dim"
+        },
+        {
+          "Image": "imgs/actions/stop-request/active"
+        }
+      ],
+      "DisableAutomaticStates": true
+    },
+    {
+      "Name": "Navigation",
+      "UUID": "de.rhao92.thebus-telemetry-interface.navigation-maneuver",
+      "Icon": "imgs/actions/navigation/action",
+      "Tooltip": "Bevorzugte Navigationstaste: dynamischer Manöverpfeil und zugehörige Entfernung aus demselben NAV-07-verriegelten Manöver.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "PropertyInspectorPath": "property-inspector/navigation.html",
+      "States": [
+        {
+          "Image": "imgs/actions/navigation/offline"
+        }
+      ],
+      "UserTitleEnabled": false
+    },
+    {
+      "Name": "Navigation · Manöverdistanz",
+      "UUID": "de.rhao92.thebus-telemetry-interface.navigation-maneuver-distance",
+      "Icon": "imgs/actions/navigation/action",
+      "Tooltip": "Verdeckte Legacy-Anzeige für die Manöverdistanz innerhalb der Beta-UUID-Familie.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "VisibleInActionsList": false,
+      "States": [
+        {
+          "Image": "imgs/actions/navigation/offline"
+        }
+      ],
+      "UserTitleEnabled": false
+    },
+    {
+      "Name": "Navigation · Nächster Halt",
+      "UUID": "de.rhao92.thebus-telemetry-interface.navigation-next-stop",
+      "Icon": "imgs/actions/navigation/action",
+      "Tooltip": "Zeigt die nächste missionsrelevante Haltestelle und ihre Entfernung entlang der Route.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "VisibleInActionsList": false,
+      "States": [
+        {
+          "Image": "imgs/actions/navigation/offline"
+        }
+      ],
+      "UserTitleEnabled": false
+    },
+    {
+      "Name": "Navigation · Reststrecke",
+      "UUID": "de.rhao92.thebus-telemetry-interface.navigation-remaining-distance",
+      "Icon": "imgs/actions/navigation/action",
+      "Tooltip": "Zeigt die verbleibende Entfernung entlang der aktiven Route bis zum Linienende.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "VisibleInActionsList": false,
+      "States": [
+        {
+          "Image": "imgs/actions/navigation/offline"
+        }
+      ],
+      "UserTitleEnabled": false
+    },
+    {
+      "Name": "Navigation · Linienfortschritt",
+      "UUID": "de.rhao92.thebus-telemetry-interface.navigation-route-progress",
+      "Icon": "imgs/actions/navigation/action",
+      "Tooltip": "Zeigt den gemessenen Fortschritt der vollständigen Linie von der ersten bis zur letzten Haltestelle.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "VisibleInActionsList": false,
+      "States": [
+        {
+          "Image": "imgs/actions/navigation/offline"
+        }
+      ],
+      "UserTitleEnabled": false
+    },
+    {
+      "Name": "Navigation · ETA",
+      "UUID": "de.rhao92.thebus-telemetry-interface.navigation-eta",
+      "Icon": "imgs/actions/navigation/action",
+      "Tooltip": "Zeigt die aus Reststrecke und beobachteter Fahrgeschwindigkeit geschätzte Ankunft am nächsten Halt.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "VisibleInActionsList": false,
+      "States": [
+        {
+          "Image": "imgs/actions/navigation/offline"
+        }
+      ],
+      "UserTitleEnabled": false
+    },
+    {
+      "Name": "Navigation · Prognose-Delta",
+      "UUID": "de.rhao92.thebus-telemetry-interface.navigation-predicted-delta",
+      "Icon": "imgs/actions/navigation/action",
+      "Tooltip": "Vergleicht die klar als Schätzung behandelte ETA mit der planmäßigen Ankunft; die offizielle Fahrplan-Delta bleibt getrennt.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "VisibleInActionsList": false,
+      "States": [
+        {
+          "Image": "imgs/actions/navigation/offline"
+        }
+      ],
+      "UserTitleEnabled": false
+    },
+    {
+      "Name": "Navigation · Prognosesicherheit",
+      "UUID": "de.rhao92.thebus-telemetry-interface.navigation-confidence",
+      "Icon": "imgs/actions/navigation/action",
+      "Tooltip": "Zeigt Datenstatus und Sicherheit der aktuellen ETA-Prognose für den isolierten Praxistest.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "VisibleInActionsList": false,
+      "States": [
+        {
+          "Image": "imgs/actions/navigation/offline"
+        }
+      ],
+      "UserTitleEnabled": false
+    },
+    {
+      "Name": "Navigation · Debug speichern",
+      "UUID": "de.rhao92.thebus-telemetry-interface.navigation-debug-capture",
+      "Icon": "imgs/actions/navigation/action",
+      "Tooltip": "Beta-Diagnose: speichert die letzten 60 Sekunden als TXT im Dokumente-Unterordner Projekte\\The Bus\\NaviDebug.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/navigation/offline"
+        }
+      ],
+      "UserTitleEnabled": false
+    },
+    {
+      "Name": "Fahrzeug · Geschwindigkeit",
+      "UUID": "de.rhao92.thebus-telemetry-interface.vehicle-speed",
+      "Icon": "imgs/actions/key-speed/action",
+      "Tooltip": "Zeigt die aktuelle Geschwindigkeit: bis Limit weiß, +1 bis +4 gelb, ab +5 km/h rot.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/key-speed/offline"
+        }
+      ],
+      "UserTitleEnabled": false
+    },
+    {
+      "Name": "Fahrzeug · Tempolimit",
+      "UUID": "de.rhao92.thebus-telemetry-interface.vehicle-speed-limit",
+      "Icon": "imgs/actions/key-speed-limit/action",
+      "Tooltip": "Zeigt das aktuell gemeldete Tempolimit als Verkehrsschild.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/key-speed-limit/offline"
+        }
+      ],
+      "UserTitleEnabled": false
+    },
+    {
+      "Name": "Fahrzeug · Leistung",
+      "UUID": "de.rhao92.thebus-telemetry-interface.vehicle-power",
+      "Icon": "imgs/actions/key-power/action",
+      "Tooltip": "Zeigt die elektrische Leistung direkt aus Powermeter in kW mit einer Nachkommastelle.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/key-power/offline"
+        }
+      ],
+      "UserTitleEnabled": false
+    },
+    {
+      "Name": "Fahrzeug · Akku",
+      "UUID": "de.rhao92.thebus-telemetry-interface.vehicle-battery",
+      "Icon": "imgs/actions/key-battery/action",
+      "Tooltip": "Zeigt den gemeldeten eCitaro-Akkustand aus DisplayFuel in Prozent.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/key-battery/offline"
+        }
+      ],
+      "UserTitleEnabled": false
+    },
+    {
+      "Name": "Klima · Steuerung",
+      "UUID": "de.rhao92.thebus-telemetry-interface.hvac-control",
+      "Icon": "imgs/actions/hvac/action",
+      "Tooltip": "Eine fahrzeugunabhängige Klimataste für Ein/Aus, Solltemperatur ±1 °C oder die tatsächlich gemeldete Lüftungssteuerung. Anzeige und Befehle werden dynamisch aus Buttons und Actions abgeleitet.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "PropertyInspectorPath": "property-inspector/hvac.html",
+      "States": [
+        {
+          "Image": "imgs/actions/hvac/action"
+        }
+      ],
+      "UserTitleEnabled": false
+    },
+    {
+      "Name": "Klima · Regler",
+      "UUID": "de.rhao92.thebus-telemetry-interface.hvac-dial",
+      "Icon": "imgs/actions/hvac/action",
+      "Tooltip": "Ein konfigurierbarer Stream-Deck-Plus-Regler für Luftverteilung, Solltemperatur oder Lüftergeschwindigkeit. Befehle und Anzeige folgen den echten Fahrzeugreglern.",
+      "Controllers": [
+        "Encoder"
+      ],
+      "PropertyInspectorPath": "property-inspector/hvac.html",
+      "Encoder": {
+        "Icon": "imgs/actions/hvac/action",
+        "layout": "layouts/touch-segment.json",
+        "StackColor": "#38C9FF",
+        "TriggerDescription": {
+          "Rotate": "Klima-Regler drehen",
+          "Push": "Keine Funktion",
+          "Touch": "Keine Funktion"
+        }
+      },
+      "States": [
+        {
+          "Image": "imgs/actions/hvac/action"
+        }
+      ],
+      "UserTitleEnabled": false
+    },
+    {
+      "Name": "Türen · Türsteuerung",
+      "UUID": "de.rhao92.thebus-telemetry-interface.door-control",
+      "Icon": "imgs/actions/all-doors/action",
+      "Tooltip": "Eine konfigurierbare Taste für alle Türen oder Tür 1 bis 4. Anzeige und Animation folgen der bestätigten Türtelemetrie.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "PropertyInspectorPath": "property-inspector.html",
+      "States": [
+        {
+          "Image": "imgs/actions/all-doors/offline"
+        }
+      ],
+      "UserTitleEnabled": false
+    },
+    {
+      "Name": "Türen · Türfreigabe",
+      "UUID": "de.rhao92.thebus-telemetry-interface.door-clearance",
+      "Icon": "imgs/actions/door-clearance/action",
+      "Tooltip": "Schaltet die Türfreigabe um; die Anzeige folgt ausschließlich der bestätigten ButtonLight-Telemetrie.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/door-clearance/offline"
+        },
+        {
+          "Image": "imgs/actions/door-clearance/inactive"
+        },
+        {
+          "Image": "imgs/actions/door-clearance/active"
+        }
+      ],
+      "DisableAutomaticStates": true
+    },
+    {
+      "Name": "Türen · Automatisches Türschließen",
+      "UUID": "de.rhao92.thebus-telemetry-interface.automatic-door-closing",
+      "Icon": "imgs/actions/automatic-door-closing/action",
+      "Tooltip": "Schaltet das automatische Schließen der hinteren Türen um und zeigt nur den bestätigten Fahrzeugzustand an.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/automatic-door-closing/offline"
+        },
+        {
+          "Image": "imgs/actions/automatic-door-closing/inactive"
+        },
+        {
+          "Image": "imgs/actions/automatic-door-closing/active"
+        }
+      ],
+      "DisableAutomaticStates": true
+    },
+    {
+      "Name": "Fahrt · Gangwahl",
+      "UUID": "de.rhao92.thebus-telemetry-interface.gear-selector",
+      "Icon": "imgs/actions/gear-drive/action",
+      "Tooltip": "Eine konfigurierbare Taste für D, N oder R. Der aktive Gang wird ausschließlich telemetriebasiert angezeigt.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "PropertyInspectorPath": "property-inspector.html",
+      "States": [
+        {
+          "Image": "imgs/actions/gear-drive/offline"
+        }
+      ],
+      "UserTitleEnabled": false
+    },
+    {
+      "Name": "Fahrt · Blinker",
+      "UUID": "de.rhao92.thebus-telemetry-interface.indicator-control",
+      "Icon": "imgs/actions/indicator-left/action",
+      "Tooltip": "Eine konfigurierbare Taste für Blinker links, Blinker rechts oder Warnblinker. Die Blinkphase folgt den echten Ingame-Lampenwerten.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "PropertyInspectorPath": "property-inspector.html",
+      "States": [
+        {
+          "Image": "imgs/actions/indicator-left/offline"
+        }
+      ],
+      "UserTitleEnabled": false
+    },
+    {
+      "Name": "Fahrt · Zündung",
+      "UUID": "de.rhao92.thebus-telemetry-interface.ignition",
+      "Icon": "imgs/actions/ignition/action",
+      "Tooltip": "Halten wie im Bus. Offline, Aus, Zündung und Motor folgen ausschließlich EngineStarted/IgnitionEnabled; widersprüchliche Langdruck-Zwischenwerte werden gefiltert.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/ignition/offline"
+        },
+        {
+          "Image": "imgs/actions/ignition/off"
+        },
+        {
+          "Image": "imgs/actions/ignition/ignition"
+        },
+        {
+          "Image": "imgs/actions/ignition/engine"
+        }
+      ],
+      "DisableAutomaticStates": true
+    },
+    {
+      "Name": "Fahrt · Feststellbremse",
+      "UUID": "de.rhao92.thebus-telemetry-interface.parking-brake",
+      "Icon": "imgs/actions/parking-brake/action",
+      "Tooltip": "Schaltet die Feststellbremse. Die Anzeige folgt ausschließlich Parking Brake.State beziehungsweise FixingBrake.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/parking-brake/offline"
+        },
+        {
+          "Image": "imgs/actions/parking-brake/inactive"
+        },
+        {
+          "Image": "imgs/actions/parking-brake/active"
+        }
+      ],
+      "DisableAutomaticStates": true
+    },
+    {
+      "Name": "Fahrt · Retarder",
+      "UUID": "de.rhao92.thebus-telemetry-interface.retarder-control",
+      "Icon": "imgs/actions/retarder/action",
+      "Tooltip": "Zeigt die echte Retarderhebel-Stufe und bedient nur die vom Fahrzeug gemeldeten Retarder-Events. Stufe höher/niedriger, aus oder direkte Stufenwahl sind konfigurierbar.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "PropertyInspectorPath": "property-inspector.html",
+      "States": [
+        {
+          "Image": "imgs/actions/retarder/action"
+        }
+      ],
+      "UserTitleEnabled": false
+    },
+    {
+      "Name": "Fahrt · Sonnenblende",
+      "UUID": "de.rhao92.thebus-telemetry-interface.sun-blind",
+      "Icon": "imgs/actions/sun-blind/action",
+      "Tooltip": "Drücken und halten fährt die Fahrer-Sonnenblende über die gemeldeten Window-Shade-Events; Loslassen stoppt die Bewegung. Richtung und Anzeige folgen ausschließlich dem bestätigten Zustand.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/sun-blind/action"
+        }
+      ],
+      "UserTitleEnabled": false
+    },
+    {
+      "Name": "Fahrt · Scheibenwischer",
+      "UUID": "de.rhao92.thebus-telemetry-interface.wiper-control",
+      "Icon": "imgs/actions/wiper/action",
+      "Tooltip": "Zeigt die echte Wischerstufe und sendet je nach Konfiguration WiperUp oder WiperDown. An den bestätigten Endstufen wird kein Befehl gesendet.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "PropertyInspectorPath": "property-inspector.html",
+      "States": [
+        {
+          "Image": "imgs/actions/wiper/action"
+        }
+      ],
+      "UserTitleEnabled": false
+    },
+    {
+      "Name": "Einstieg · Kneeling",
+      "UUID": "de.rhao92.thebus-telemetry-interface.kneeling-control",
+      "Icon": "imgs/actions/kneeling/action",
+      "Tooltip": "Eine konfigurierbare Taste für manuelles oder automatisches Kneeling.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "PropertyInspectorPath": "property-inspector.html",
+      "States": [
+        {
+          "Image": "imgs/actions/kneeling/offline"
+        }
+      ],
+      "UserTitleEnabled": false
+    },
+    {
+      "Name": "Einstieg · Rollstuhlrampe",
+      "UUID": "de.rhao92.thebus-telemetry-interface.ramp",
+      "Icon": "imgs/actions/ramp/action",
+      "Tooltip": "Bedient die Rampe und zeigt telemetriebasiert gesperrt, bereit oder ausgefahren an.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/ramp/offline"
+        },
+        {
+          "Image": "imgs/actions/ramp/inactive"
+        },
+        {
+          "Image": "imgs/actions/ramp/ready"
+        },
+        {
+          "Image": "imgs/actions/ramp/active"
+        }
+      ],
+      "DisableAutomaticStates": true
+    },
+    {
+      "Name": "Licht · Außenbeleuchtung",
+      "UUID": "de.rhao92.thebus-telemetry-interface.exterior-light-control",
+      "Icon": "imgs/actions/exterior-lights/action",
+      "Tooltip": "Konfigurierbare Außenlicht-Taste. Lichtschalter hoch/runter und Fernlicht senden belegte Events; Tagfahr-, Stand-, Abblend- und Nebellicht bleiben ohne belegtes Einzel-Event reine Telemetrieanzeigen.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "PropertyInspectorPath": "property-inspector.html",
+      "States": [
+        {
+          "Image": "imgs/actions/exterior-lights/action"
+        }
+      ],
+      "UserTitleEnabled": false
+    },
+    {
+      "Name": "Licht · Fahrgastraumlicht",
+      "UUID": "de.rhao92.thebus-telemetry-interface.passenger-light-control",
+      "Icon": "imgs/actions/passenger-lights/action",
+      "Tooltip": "Eine konfigurierbare Taste zum Ein-/Ausschalten, Dimmen oder Aufhellen der Fahrgastraumbeleuchtung.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "PropertyInspectorPath": "property-inspector.html",
+      "States": [
+        {
+          "Image": "imgs/actions/passenger-lights/offline"
+        }
+      ],
+      "UserTitleEnabled": false
+    },
+    {
+      "Name": "Ticketing · ATRON-Steuerung",
+      "UUID": "de.rhao92.thebus-telemetry-interface.ticket-control",
+      "Icon": "imgs/actions/ticket-control/action",
+      "Tooltip": "Bedient ausschließlich belegte ATRON-Tasten: Bordcomputer auswählen, gemeldete Münztasten und Take Cash Money. Ticket-, Preis-, Zahl- oder Belegdaten werden ohne echte Sales-Telemetrie nicht angezeigt.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "PropertyInspectorPath": "property-inspector.html",
+      "States": [
+        {
+          "Image": "imgs/actions/ticket-control/action"
+        }
+      ],
+      "UserTitleEnabled": false
+    },
+    {
+      "Name": "Fahrt · Gang D",
+      "UUID": "de.rhao92.thebus-telemetry-interface.gear-drive",
+      "Icon": "imgs/actions/gear-drive/action",
+      "Tooltip": "Legt Gang D ein. Die aktive Anzeige folgt ausschließlich der bestätigten Gangwahl-Telemetrie.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/gear-drive/offline"
+        },
+        {
+          "Image": "imgs/actions/gear-drive/inactive"
+        },
+        {
+          "Image": "imgs/actions/gear-drive/active"
+        }
+      ],
+      "VisibleInActionsList": false,
+      "DisableAutomaticStates": true
+    },
+    {
+      "Name": "Fahrt · Gang N",
+      "UUID": "de.rhao92.thebus-telemetry-interface.gear-neutral",
+      "Icon": "imgs/actions/gear-neutral/action",
+      "Tooltip": "Legt Gang N ein. Die aktive Anzeige folgt ausschließlich der bestätigten Gangwahl-Telemetrie.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/gear-neutral/offline"
+        },
+        {
+          "Image": "imgs/actions/gear-neutral/inactive"
+        },
+        {
+          "Image": "imgs/actions/gear-neutral/active"
+        }
+      ],
+      "VisibleInActionsList": false,
+      "DisableAutomaticStates": true
+    },
+    {
+      "Name": "Fahrt · Gang R",
+      "UUID": "de.rhao92.thebus-telemetry-interface.gear-reverse",
+      "Icon": "imgs/actions/gear-reverse/action",
+      "Tooltip": "Legt Gang R ein. Die aktive Anzeige folgt ausschließlich der bestätigten Gangwahl-Telemetrie.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/gear-reverse/offline"
+        },
+        {
+          "Image": "imgs/actions/gear-reverse/inactive"
+        },
+        {
+          "Image": "imgs/actions/gear-reverse/active"
+        }
+      ],
+      "VisibleInActionsList": false,
+      "DisableAutomaticStates": true
+    },
+    {
+      "Name": "Fahrt · Blinker links",
+      "UUID": "de.rhao92.thebus-telemetry-interface.indicator-left",
+      "Icon": "imgs/actions/indicator-left/action",
+      "Tooltip": "Bedient den linken Blinker. Zustand und echte Hell-/Dunkelphase folgen IndicatorState und Light Indicator Left.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/indicator-left/offline"
+        },
+        {
+          "Image": "imgs/actions/indicator-left/inactive"
+        },
+        {
+          "Image": "imgs/actions/indicator-left/active-dim"
+        },
+        {
+          "Image": "imgs/actions/indicator-left/active"
+        }
+      ],
+      "VisibleInActionsList": false,
+      "DisableAutomaticStates": true
+    },
+    {
+      "Name": "Fahrt · Blinker rechts",
+      "UUID": "de.rhao92.thebus-telemetry-interface.indicator-right",
+      "Icon": "imgs/actions/indicator-right/action",
+      "Tooltip": "Bedient den rechten Blinker. Zustand und echte Hell-/Dunkelphase folgen IndicatorState und Light Indicator Right.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/indicator-right/offline"
+        },
+        {
+          "Image": "imgs/actions/indicator-right/inactive"
+        },
+        {
+          "Image": "imgs/actions/indicator-right/active-dim"
+        },
+        {
+          "Image": "imgs/actions/indicator-right/active"
+        }
+      ],
+      "VisibleInActionsList": false,
+      "DisableAutomaticStates": true
+    },
+    {
+      "Name": "Fahrt · Warnblinker",
+      "UUID": "de.rhao92.thebus-telemetry-interface.warning-lights",
+      "Icon": "imgs/actions/warning-lights/action",
+      "Tooltip": "Schaltet den Warnblinker. Zustand und echte Hell-/Dunkelphase folgen WarningLights und LED Warning.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/warning-lights/offline"
+        },
+        {
+          "Image": "imgs/actions/warning-lights/inactive"
+        },
+        {
+          "Image": "imgs/actions/warning-lights/active-dim"
+        },
+        {
+          "Image": "imgs/actions/warning-lights/active"
+        }
+      ],
+      "VisibleInActionsList": false,
+      "DisableAutomaticStates": true
+    },
+    {
+      "Name": "Türen · Alle Türen",
+      "UUID": "de.rhao92.thebus-telemetry-interface.all-doors",
+      "Icon": "imgs/actions/all-doors/action",
+      "Tooltip": "Öffnet alle bestätigten geschlossenen Türen oder schließt gezielt offene und bewegte Türen; Bewegung blinkt telemetriebasiert.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/all-doors/offline"
+        },
+        {
+          "Image": "imgs/actions/all-doors/closed"
+        },
+        {
+          "Image": "imgs/actions/all-doors/mixed"
+        },
+        {
+          "Image": "imgs/actions/all-doors/open"
+        },
+        {
+          "Image": "imgs/actions/all-doors/moving-dim"
+        },
+        {
+          "Image": "imgs/actions/all-doors/moving"
+        }
+      ],
+      "VisibleInActionsList": false,
+      "DisableAutomaticStates": true
+    },
+    {
+      "Name": "Türen · Tür 1",
+      "UUID": "de.rhao92.thebus-telemetry-interface.door-1",
+      "Icon": "imgs/actions/door-1/action",
+      "Tooltip": "Öffnet oder schließt Tür 1; Zustand und Blinkanimation folgen ausschließlich der bestätigten Türtelemetrie.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/door-1/offline"
+        },
+        {
+          "Image": "imgs/actions/door-1/closed"
+        },
+        {
+          "Image": "imgs/actions/door-1/moving-dim"
+        },
+        {
+          "Image": "imgs/actions/door-1/open"
+        },
+        {
+          "Image": "imgs/actions/door-1/moving"
+        }
+      ],
+      "VisibleInActionsList": false,
+      "DisableAutomaticStates": true
+    },
+    {
+      "Name": "Türen · Tür 2",
+      "UUID": "de.rhao92.thebus-telemetry-interface.door-2",
+      "Icon": "imgs/actions/door-2/action",
+      "Tooltip": "Öffnet oder schließt Tür 2; Zustand und Blinkanimation folgen ausschließlich der bestätigten Türtelemetrie.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/door-2/offline"
+        },
+        {
+          "Image": "imgs/actions/door-2/closed"
+        },
+        {
+          "Image": "imgs/actions/door-2/moving-dim"
+        },
+        {
+          "Image": "imgs/actions/door-2/open"
+        },
+        {
+          "Image": "imgs/actions/door-2/moving"
+        }
+      ],
+      "VisibleInActionsList": false,
+      "DisableAutomaticStates": true
+    },
+    {
+      "Name": "Türen · Tür 3",
+      "UUID": "de.rhao92.thebus-telemetry-interface.door-3",
+      "Icon": "imgs/actions/door-3/action",
+      "Tooltip": "Öffnet oder schließt Tür 3; Zustand und Blinkanimation folgen ausschließlich der bestätigten Türtelemetrie.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/door-3/offline"
+        },
+        {
+          "Image": "imgs/actions/door-3/closed"
+        },
+        {
+          "Image": "imgs/actions/door-3/moving-dim"
+        },
+        {
+          "Image": "imgs/actions/door-3/open"
+        },
+        {
+          "Image": "imgs/actions/door-3/moving"
+        }
+      ],
+      "VisibleInActionsList": false,
+      "DisableAutomaticStates": true
+    },
+    {
+      "Name": "Türen · Tür 4",
+      "UUID": "de.rhao92.thebus-telemetry-interface.door-4",
+      "Icon": "imgs/actions/door-4/action",
+      "Tooltip": "Öffnet oder schließt Tür 4; Zustand und Blinkanimation folgen ausschließlich der bestätigten Türtelemetrie.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/door-4/offline"
+        },
+        {
+          "Image": "imgs/actions/door-4/closed"
+        },
+        {
+          "Image": "imgs/actions/door-4/moving-dim"
+        },
+        {
+          "Image": "imgs/actions/door-4/open"
+        },
+        {
+          "Image": "imgs/actions/door-4/moving"
+        }
+      ],
+      "VisibleInActionsList": false,
+      "DisableAutomaticStates": true
+    },
+    {
+      "Name": "Einstieg · Kneeling",
+      "UUID": "de.rhao92.thebus-telemetry-interface.kneeling",
+      "Icon": "imgs/actions/kneeling/action",
+      "Tooltip": "Bedient Kneeling; die Anzeige folgt der tatsächlichen Fahrwerksposition.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/kneeling/offline"
+        },
+        {
+          "Image": "imgs/actions/kneeling/ready"
+        },
+        {
+          "Image": "imgs/actions/kneeling/active"
+        },
+        {
+          "Image": "imgs/actions/kneeling/inactive"
+        }
+      ],
+      "VisibleInActionsList": false,
+      "DisableAutomaticStates": true
+    },
+    {
+      "Name": "Einstieg · Auto-Kneeling",
+      "UUID": "de.rhao92.thebus-telemetry-interface.automatic-kneeling",
+      "Icon": "imgs/actions/automatic-kneeling/action",
+      "Tooltip": "Schaltet das automatische Kneeling um. Button und Kontrolllampe werden invertiert ausgewertet; fehlende Telemetrie bleibt offline.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/automatic-kneeling/offline"
+        },
+        {
+          "Image": "imgs/actions/automatic-kneeling/inactive"
+        },
+        {
+          "Image": "imgs/actions/automatic-kneeling/active"
+        }
+      ],
+      "VisibleInActionsList": false,
+      "DisableAutomaticStates": true
+    },
+    {
+      "Name": "Licht · Fahrgastraum",
+      "UUID": "de.rhao92.thebus-telemetry-interface.passenger-lights",
+      "Icon": "imgs/actions/passenger-lights/action",
+      "Tooltip": "Schaltet die Fahrgastraumbeleuchtung ein oder aus und zeigt ausschließlich bestätigt Aus, Gedimmt oder Hell an.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/passenger-lights/offline"
+        },
+        {
+          "Image": "imgs/actions/passenger-lights/off"
+        },
+        {
+          "Image": "imgs/actions/passenger-lights/dim"
+        },
+        {
+          "Image": "imgs/actions/passenger-lights/bright"
+        }
+      ],
+      "VisibleInActionsList": false,
+      "DisableAutomaticStates": true
+    },
+    {
+      "Name": "Licht · Fahrgastraum dunkler",
+      "UUID": "de.rhao92.thebus-telemetry-interface.passenger-lights-dim",
+      "Icon": "imgs/actions/passenger-lights-dim/action",
+      "Tooltip": "Schaltet das Fahrgastraumlicht bei Bedarf ein und dimmt es; die Anzeige bleibt vollständig telemetriebasiert.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/passenger-lights-dim/offline"
+        },
+        {
+          "Image": "imgs/actions/passenger-lights-dim/off"
+        },
+        {
+          "Image": "imgs/actions/passenger-lights-dim/dim"
+        },
+        {
+          "Image": "imgs/actions/passenger-lights-dim/bright"
+        }
+      ],
+      "VisibleInActionsList": false,
+      "DisableAutomaticStates": true
+    },
+    {
+      "Name": "Licht · Fahrgastraum heller",
+      "UUID": "de.rhao92.thebus-telemetry-interface.passenger-lights-bright",
+      "Icon": "imgs/actions/passenger-lights-bright/action",
+      "Tooltip": "Schaltet das Fahrgastraumlicht bei Bedarf ein und erhöht die Helligkeit; die Anzeige bleibt vollständig telemetriebasiert.",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/passenger-lights-bright/offline"
+        },
+        {
+          "Image": "imgs/actions/passenger-lights-bright/off"
+        },
+        {
+          "Image": "imgs/actions/passenger-lights-bright/dim"
+        },
+        {
+          "Image": "imgs/actions/passenger-lights-bright/bright"
+        }
+      ],
+      "VisibleInActionsList": false,
+      "DisableAutomaticStates": true
+    }
+  ],
+  "Category": "Rhao92’s The Bus Telemetry Interface",
+  "CategoryIcon": "imgs/plugin/category",
+  "CodePath": "bin/plugin.js",
+  "Description": "Telemetriegestützte Steuerung und Live-Anzeigen für The Bus auf Stream-Deck-Tasten, Dials und Touchflächen.",
+  "Icon": "imgs/plugin/marketplace",
+  "SDKVersion": 3,
+  "Software": {
+    "MinimumVersion": "7.2"
+  },
+  "OS": [
+    {
+      "Platform": "windows",
+      "MinimumVersion": "10"
+    }
+  ],
+  "Nodejs": {
+    "Version": "20"
+  },
+  "UUID": "de.rhao92.thebus-telemetry-interface"
+}

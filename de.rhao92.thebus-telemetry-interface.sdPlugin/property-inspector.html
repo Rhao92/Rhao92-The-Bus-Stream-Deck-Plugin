@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rhao92’s The Bus Telemetry Interface – Action konfigurieren</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 13px;
+      --bg: #2d2d2d;
+      --panel: #363636;
+      --border: #555;
+      --text: #f1f1f1;
+      --muted: #b9b9b9;
+      --accent: #48d9ea;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 14px 12px 18px;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .group {
+      display: grid;
+      grid-template-columns: 92px minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    label {
+      color: var(--muted);
+      text-align: right;
+      line-height: 1.25;
+    }
+
+    select {
+      width: 100%;
+      min-height: 30px;
+      padding: 4px 28px 4px 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--panel);
+      color: var(--text);
+      outline: none;
+    }
+
+    select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(72, 217, 234, 0.35);
+    }
+
+    .hint {
+      margin: 4px 0 0 102px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
+    .status {
+      margin: 12px 0 0 102px;
+      min-height: 16px;
+      color: var(--accent);
+      font-size: 11px;
+      opacity: 0;
+      transition: opacity 150ms ease;
+    }
+
+    .status.visible { opacity: 1; }
+  </style>
+</head>
+<body>
+  <div class="group">
+    <label for="mode">Funktion</label>
+    <select id="mode" disabled aria-label="Funktion auswählen"></select>
+  </div>
+  <p class="hint" id="hint">Die Auswahl wird automatisch für diese Taste gespeichert.</p>
+  <p class="status" id="status" role="status">Gespeichert</p>
+
+  <script>
+    const CONFIGS = {
+      "de.rhao92.thebus-telemetry-interface.door-control": {
+        fallback: "all",
+        options: [
+          ["all", "Alle Türen"],
+          ["door-1", "Tür 1"],
+          ["door-2", "Tür 2"],
+          ["door-3", "Tür 3"],
+          ["door-4", "Tür 4"]
+        ]
+      },
+      "de.rhao92.thebus-telemetry-interface.gear-selector": {
+        fallback: "D",
+        options: [
+          ["D", "Gang D"],
+          ["N", "Gang N"],
+          ["R", "Gang R"]
+        ]
+      },
+      "de.rhao92.thebus-telemetry-interface.indicator-control": {
+        fallback: "left",
+        options: [
+          ["left", "Blinker links"],
+          ["right", "Blinker rechts"],
+          ["warning", "Warnblinker"]
+        ]
+      },
+      "de.rhao92.thebus-telemetry-interface.retarder-control": {
+        fallback: "increase",
+        options: [
+          ["increase", "Stufe höher"],
+          ["decrease", "Stufe niedriger"],
+          ["off", "Retarder aus"],
+          ["level-1", "Direkt auf Stufe 1"],
+          ["level-2", "Direkt auf Stufe 2"],
+          ["level-3", "Direkt auf Stufe 3"],
+          ["level-4", "Direkt auf Stufe 4"],
+          ["level-5", "Direkt auf Stufe 5"]
+        ]
+      },
+      "de.rhao92.thebus-telemetry-interface.wiper-control": {
+        fallback: "increase",
+        options: [
+          ["increase", "Wischerstufe höher"],
+          ["decrease", "Wischerstufe niedriger"]
+        ]
+      },
+      "de.rhao92.thebus-telemetry-interface.kneeling-control": {
+        fallback: "manual",
+        options: [
+          ["manual", "Kneeling manuell"],
+          ["automatic", "Automatisches Kneeling"]
+        ]
+      },
+      "de.rhao92.thebus-telemetry-interface.passenger-light-control": {
+        fallback: "toggle",
+        options: [
+          ["toggle", "Ein / Aus"],
+          ["dim", "Dunkler"],
+          ["bright", "Heller"]
+        ]
+      },
+      "de.rhao92.thebus-telemetry-interface.exterior-light-control": {
+        fallback: "switch-up",
+        options: [
+          ["switch-up", "Lichtschalter: Position höher"],
+          ["switch-down", "Lichtschalter: Position niedriger"],
+          ["daytime", "Tagfahrlicht (nur Anzeige)"],
+          ["parking", "Standlicht (nur Anzeige)"],
+          ["headlights", "Abblendlicht (nur Anzeige)"],
+          ["high-beam", "Fernlicht umschalten"],
+          ["front-fog", "Nebellicht vorne (nur Anzeige)"],
+          ["rear-fog", "Nebelschlusslicht (nur Anzeige)"]
+        ]
+      },
+      "de.rhao92.thebus-telemetry-interface.ticket-control": {
+        fallback: "atron",
+        options: [
+          ["atron", "ATRON/Bordcomputer auswählen"],
+          ["take-cash", "Take Cash Money"],
+          ["coin-005", "Münztaste 0,05 €"],
+          ["coin-010", "Münztaste 0,10 €"],
+          ["coin-015", "Münztaste 0,15 €"],
+          ["coin-020", "Münztaste 0,20 €"],
+          ["coin-030", "Münztaste 0,30 €"],
+          ["coin-050", "Münztaste 0,50 €"],
+          ["coin-060", "Münztaste 0,60 €"],
+          ["coin-100", "Münztaste 1,00 €"],
+          ["coin-200", "Münztaste 2,00 €"],
+          ["coin-400", "Münztaste 4,00 €"],
+          ["coin-600", "Münztaste 6,00 €"],
+          ["coin-800", "Münztaste 8,00 €"]
+        ]
+      }
+    };
+
+    let websocket;
+    let context = "";
+    let contexts = [];
+    let actionUuid = "";
+    let settings = {};
+    let statusTimer;
+    let pendingMode = null;
+
+    const modeSelect = document.getElementById("mode");
+    const status = document.getElementById("status");
+
+    window.connectElgatoStreamDeckSocket = function (
+      port,
+      propertyInspectorUuid,
+      registerEvent,
+      info,
+      actionInfo
+    ) {
+      const parsedActionInfo = JSON.parse(actionInfo);
+      // Aktuelle Stream-Deck-Versionen liefern den Action-Kontext in
+      // actionInfo.context. Einige ältere/abweichende Hosts verwenden für
+      // kontextbezogene PI-Befehle hingegen die Callback-UUID. Wir verwenden
+      // den dokumentierten Action-Kontext zuerst und halten die PI-UUID als
+      // Kompatibilitäts-Fallback bereit.
+      contexts = Array.from(new Set([
+        parsedActionInfo.context,
+        propertyInspectorUuid
+      ].filter((value) => typeof value === "string" && value.length > 0)));
+      context = parsedActionInfo.context || propertyInspectorUuid;
+      actionUuid = parsedActionInfo.action;
+      settings = parsedActionInfo.payload?.settings || {};
+
+      websocket = new WebSocket(`ws://127.0.0.1:${port}`);
+      websocket.onopen = () => {
+        websocket.send(JSON.stringify({
+          event: registerEvent,
+          uuid: propertyInspectorUuid
+        }));
+        renderConfig();
+
+        // Den wirklich persistierten Stand explizit anfordern, statt nur auf
+        // den möglicherweise älteren actionInfo-Snapshot zu vertrauen.
+        for (const targetContext of contexts) {
+          websocket.send(JSON.stringify({
+            event: "getSettings",
+            action: actionUuid,
+            context: targetContext
+          }));
+        }
+      };
+      websocket.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+
+          if (message.event === "didReceiveSettings" && contexts.includes(message.context)) {
+            settings = message.payload?.settings || {};
+            selectCurrentMode();
+
+            if (pendingMode !== null && settings.mode === pendingMode) {
+              pendingMode = null;
+              showStatus("Gespeichert");
+            }
+          }
+        } catch (error) {
+          // Ungültige Fremdnachrichten dürfen den Inspector nicht blockieren.
+        }
+      };
+    };
+
+    modeSelect.addEventListener("change", () => {
+      settings = { ...settings, mode: modeSelect.value };
+      pendingMode = modeSelect.value;
+      showStatus("Speichere …");
+      saveSettings();
+    });
+
+    function renderConfig() {
+      const config = CONFIGS[actionUuid];
+
+      if (!config) {
+        modeSelect.innerHTML = '<option>Keine Konfiguration verfügbar</option>';
+        modeSelect.disabled = true;
+        return;
+      }
+
+      modeSelect.innerHTML = "";
+
+      for (const [value, label] of config.options) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label;
+        modeSelect.appendChild(option);
+      }
+
+      modeSelect.disabled = false;
+      selectCurrentMode();
+    }
+
+    function selectCurrentMode() {
+      const config = CONFIGS[actionUuid];
+
+      if (!config) {
+        return;
+      }
+
+      const valid = config.options.some(([value]) => value === settings.mode);
+      modeSelect.value = valid ? settings.mode : config.fallback;
+    }
+
+    function saveSettings() {
+      if (
+        !websocket
+        || websocket.readyState !== WebSocket.OPEN
+        || contexts.length === 0
+        || !actionUuid
+      ) {
+        return;
+      }
+
+      for (const targetContext of contexts) {
+        // Regulär in Stream Deck speichern.
+        websocket.send(JSON.stringify({
+          event: "setSettings",
+          action: actionUuid,
+          context: targetContext,
+          payload: settings
+        }));
+
+        // Gleichzeitig den Plugin-Kontext direkt informieren. Das Plugin
+        // speichert denselben Modus nochmals über die SDK-Action und rendert
+        // das neue Offline-/Statusbild unmittelbar.
+        websocket.send(JSON.stringify({
+          event: "sendToPlugin",
+          action: actionUuid,
+          context: targetContext,
+          payload: {
+            type: "modeChanged",
+            mode: settings.mode,
+            nonce: Date.now()
+          }
+        }));
+      }
+    }
+
+    function showStatus(text) {
+      window.clearTimeout(statusTimer);
+      status.textContent = text;
+      status.classList.add("visible");
+      statusTimer = window.setTimeout(() => {
+        status.classList.remove("visible");
+      }, text === "Gespeichert" ? 900 : 1800);
+    }
+  </script>
+</body>
+</html>

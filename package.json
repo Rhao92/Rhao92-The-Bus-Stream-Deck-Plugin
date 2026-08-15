@@ -1,0 +1,36 @@
+{
+  "name": "rhao92-the-bus-telemetry-interface",
+  "version": "2.15.0-beta.18",
+  "description": "Stream Deck plugin for The Bus – telemetry, controls and live vehicle status.",
+  "private": true,
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Rhao92/The-Bus-Telemetry-Interface.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Rhao92/The-Bus-Telemetry-Interface/issues"
+  },
+  "homepage": "https://github.com/Rhao92/The-Bus-Telemetry-Interface#readme",
+  "scripts": {
+    "build": "tsc --noEmit && rollup -c",
+    "link": "streamdeck link de.rhao92.thebus-telemetry-interface.sdPlugin",
+    "restart": "streamdeck restart de.rhao92.thebus-telemetry-interface",
+    "pack": "streamdeck pack de.rhao92.thebus-telemetry-interface.sdPlugin"
+  },
+  "devDependencies": {
+    "@elgato/cli": "^1.5.1",
+    "@rollup/plugin-commonjs": "^28.0.0",
+    "@rollup/plugin-node-resolve": "^15.2.2",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^12.1.0",
+    "@tsconfig/node20": "^20.1.2",
+    "@types/node": "~20.15.0",
+    "rollup": "^4.0.2",
+    "tslib": "^2.6.2",
+    "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "@elgato/streamdeck": "^2.0.2"
+  }
+}

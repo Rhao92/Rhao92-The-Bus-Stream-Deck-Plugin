@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "strict": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
+    "outDir": "../../tbp_212_15_qa_build",
+    "rootDir": "..",
+    "noImplicitOverride": true
+  },
+  "files": [
+    "core-state-tests.ts",
+    "../src/core/driving-controls.ts",
+    "../src/core/gear.ts",
+    "../src/core/kneeling.ts",
+    "../src/core/ramp.ts",
+    "../src/core/vehicle-controls.ts",
+    "../src/core/vehicle-buttons.ts",
+    "../src/core/doors.ts",
+    "../src/core/telemetry.ts",
+    "../src/core/refresh-registry.ts",
+    "../src/core/vehicle-motion.ts"
+    ,"../src/core/hvac.ts"
+    ,"../src/hvac/hvac-renderer.ts"
+    ,"../src/core/runtime-display.ts"
+    ,"../src/core/offline-renderer.ts"
+  ]
+}

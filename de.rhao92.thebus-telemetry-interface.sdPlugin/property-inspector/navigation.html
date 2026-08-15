@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Rhao92’s The Bus Telemetry Interface – Navigation</title>
+  <style>
+    :root { color-scheme: dark; font-family: Arial,Helvetica,sans-serif; font-size: 13px; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 16px; color: #f4f4f4; background: #2b2b2b; }
+    h1 { margin: 0 0 5px; color: #38c9ff; font-size: 15px; }
+    p { margin: 0 0 14px; color: #bdbdbd; line-height: 1.35; }
+    label { display: grid; grid-template-columns: 76px 1fr; gap: 10px; align-items: center; }
+    span { color: #c8c8c8; text-align: right; }
+    select { width: 100%; min-height: 32px; padding: 5px 8px; border: 1px solid #555; border-radius: 5px; color: #f4f4f4; background: #363636; }
+    select:focus { border-color: #38c9ff; outline: none; box-shadow: 0 0 0 1px rgb(56 201 255 / 35%); }
+  </style>
+</head>
+<body>
+  <h1>Navigation</h1>
+  <p>Wähle aus, was diese Taste anzeigen soll.</p>
+  <label for="kind"><span>Anzeige</span><select id="kind">
+    <option value="maneuver">Pfeil + Entfernung</option>
+    <option value="maneuver-distance">Legacy · nur Entfernung</option>
+    <option value="next-stop">Nächster Halt</option>
+    <option value="total-distance">Gesamtstrecke</option>
+    <option value="remaining-distance">Reststrecke</option>
+    <option value="route-progress">Linienfortschritt</option>
+    <option value="eta">ETA</option>
+    <option value="predicted-delta">Prognose-Delta</option>
+    <option value="confidence">Prognosesicherheit</option>
+  </select></label>
+  <script>
+    const NAVIGATION_ACTION = "de.rhao92.thebus-telemetry-interface.navigation-maneuver";
+    const validKinds = new Set([
+      "maneuver", "maneuver-distance", "next-stop", "total-distance", "remaining-distance",
+      "route-progress", "eta", "predicted-delta", "confidence"
+    ]);
+    const kindSelect = document.getElementById("kind");
+    let websocket;
+    let contexts = [];
+    let actionUuid = NAVIGATION_ACTION;
+    let settings = { kind: "maneuver" };
+    let pendingKind = null;
+
+    function normalized(value) {
+      return validKinds.has(value) ? value : "maneuver";
+    }
+
+    function showSelection() {
+      kindSelect.value = normalized(settings.kind);
+    }
+
+    function publish() {
+      if (websocket?.readyState !== WebSocket.OPEN || contexts.length === 0) return;
+
+      for (const targetContext of contexts) {
+        websocket.send(JSON.stringify({
+          event: "setSettings",
+          action: actionUuid,
+          context: targetContext,
+          payload: settings
+        }));
+      }
+    }
+
+    kindSelect.addEventListener("change", () => {
+      settings = { ...settings, kind: normalized(kindSelect.value) };
+      pendingKind = settings.kind;
+      showSelection();
+      publish();
+    });
+
+    function connectElgatoStreamDeckSocket(port, propertyInspectorUUID, registerEvent, info, actionInfo) {
+      try {
+        const parsed = JSON.parse(actionInfo);
+        contexts = Array.from(new Set([
+          parsed?.context,
+          propertyInspectorUUID
+        ].filter((value) => typeof value === "string" && value.length > 0)));
+        actionUuid = parsed?.action || NAVIGATION_ACTION;
+        settings = { ...(parsed?.payload?.settings ?? {}), kind: normalized(parsed?.payload?.settings?.kind) };
+      } catch {
+        contexts = [propertyInspectorUUID].filter(Boolean);
+        actionUuid = NAVIGATION_ACTION;
+        settings = { kind: "maneuver" };
+      }
+      showSelection();
+      websocket = new WebSocket(`ws://127.0.0.1:${port}`);
+      websocket.addEventListener("open", () => {
+        websocket.send(JSON.stringify({ event: registerEvent, uuid: propertyInspectorUUID }));
+
+        for (const targetContext of contexts) {
+          websocket.send(JSON.stringify({
+            event: "getSettings",
+            action: actionUuid,
+            context: targetContext
+          }));
+        }
+      });
+      websocket.addEventListener("message", (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          if (message.event !== "didReceiveSettings" || !contexts.includes(message.context)) {
+            return;
+          }
+
+          const received = {
+            ...(message.payload?.settings ?? {}),
+            kind: normalized(message.payload?.settings?.kind)
+          };
+
+          if (pendingKind !== null && received.kind !== pendingKind) {
+            return;
+          }
+
+          settings = received;
+          if (pendingKind === received.kind) {
+            pendingKind = null;
+          }
+          showSelection();
+        } catch {
+          // Unbekannte WebSocket-Nachrichten dürfen den Inspector nicht stoppen.
+        }
+      });
+    }
+  </script>
+</body>
+</html>
