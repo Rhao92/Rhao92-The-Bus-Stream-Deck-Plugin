@@ -1,10 +1,23 @@
-# Rhao92’s The Bus Telemetry Interface
+# Rhao92's The Bus Stream Deck Plugin
 
-Stream Deck plugin for **The Bus** with telemetry-based vehicle controls, live
-vehicle status, timetable data, navigation and Stream Deck + panels.
+**Deutsch:** Rhao92's The Bus Stream Deck Plugin ist ein kostenloses, von
+Rhao92 entwickeltes Stream-Deck-Plugin für **The Bus**. Es verbindet
+Live-Telemetrie mit intelligenter Fahrzeugsteuerung, dynamischen
+Zustandsanzeigen, Fahrplaninformationen und experimenteller Navigation. Ein
+physisches Stream Deck ist optional: Das Plugin funktioniert auch mit Stream
+Deck Mobile auf iPhone und iPad und ist deutlich mehr als eine einfache
+Hotkey-Sammlung.
 
-> **Beta candidate `2.15.0.18`**
-> This package is prepared for beta testing and has not yet been published on GitHub.
+**English:** Rhao92's The Bus Stream Deck Plugin is a free advanced telemetry
+and vehicle control plugin for **The Bus**. It provides live telemetry,
+intelligent controls, dynamic status feedback, timetable information and
+experimental navigation. Physical Stream Deck hardware is optional because
+the plugin also works with Stream Deck Mobile on iPhone and iPad. It is much
+more than a simple hotkey collection for The Bus simulator.
+
+> **Public Beta `2.15.0.18`**
+> The current public beta is available on GitHub. Newer local changes remain
+> test-only until their practical checks and separate release approval.
 
 [Deutsch](#deutsch) · [English](#english)
 
@@ -26,7 +39,9 @@ einzelne Anzeigen und Bedienfunktionen beeinflussen.
 - Windows 10 oder neuer
 - Elgato Stream Deck Software `7.2` oder neuer
 - The Bus mit erreichbarer lokaler Telemetrie auf `127.0.0.1:37337`
-- Ein Stream-Deck-Gerät mit Tasten; für Regler und Fullpanel ein Stream Deck +
+- Optional ein physisches Stream Deck; alternativ Stream Deck Mobile auf
+  iPhone oder iPad
+- Für Regler und Fullpanel ein Stream Deck +
 
 ### Installation
 
@@ -86,6 +101,8 @@ roten Pfad-/Schreibfehler.
 - **Stream Deck +:** Zusätzliche Einzelregler und Touchanzeige für Fahrplan,
   Temperatur, Luftverteilung und – sofern der Bus Steuerevents liefert –
   Lüftergeschwindigkeit.
+- **Stream Deck Mobile:** Keypad-Actions auf iPhone und iPad ohne zusätzliches
+  physisches Stream-Deck-Gerät.
 - **Fullpanel:** Vollbreitenansicht über alle vier Reglersegmente des Stream
   Deck +.
 
@@ -113,9 +130,9 @@ Action-Eintrag in der Stream-Deck-Software gibt den benötigten Controller vor.
 ### Feedback und Fehler melden
 
 Bitte für Fehler den
-[Bug-Report](https://github.com/Rhao92/The-Bus-Telemetry-Interface/issues/new?template=bug_report.md)
+[Bug-Report](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/issues/new?template=bug_report.md)
 und für neue Ideen den
-[Feature-Request](https://github.com/Rhao92/The-Bus-Telemetry-Interface/issues/new?template=feature_request.md)
+[Feature-Request](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/issues/new?template=feature_request.md)
 verwenden. Busmodell, Linie/Route, Stream-Deck-Modell und Plugin-Version helfen
 bei der Einordnung erheblich.
 
@@ -149,7 +166,8 @@ displays and controls.
 - Windows 10 or later
 - Elgato Stream Deck software `7.2` or later
 - The Bus with local telemetry available at `127.0.0.1:37337`
-- A key-based Stream Deck; Stream Deck + for dials and the full panel
+- Optional physical Stream Deck hardware or Stream Deck Mobile on iPhone and
+  iPad; Stream Deck + is required for dials and the full panel
 
 ### Installation
 
@@ -204,6 +222,8 @@ cannot be written, the key shows a red path/write error instead.
   Stream Deck models with regular LCD keys.
 - **Stream Deck +:** Additional dials and touch display for timetable,
   temperature, airflow and – where the bus reports control events – fan speed.
+- **Stream Deck Mobile:** Keypad actions on iPhone and iPad without separate
+  physical Stream Deck hardware.
 - **Full panel:** Full-width view across all four Stream Deck + dial segments.
 
 Not every action is available on every controller type. The Stream Deck action
@@ -228,9 +248,9 @@ entry identifies whether it requires a key or encoder.
 ### Feedback and bug reports
 
 Use the
-[bug report](https://github.com/Rhao92/The-Bus-Telemetry-Interface/issues/new?template=bug_report.md)
+[bug report](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/issues/new?template=bug_report.md)
 for defects and the
-[feature request](https://github.com/Rhao92/The-Bus-Telemetry-Interface/issues/new?template=feature_request.md)
+[feature request](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/issues/new?template=feature_request.md)
 for new ideas. Plugin version, bus model, line/route and Stream Deck model make
 reports much easier to evaluate.
 

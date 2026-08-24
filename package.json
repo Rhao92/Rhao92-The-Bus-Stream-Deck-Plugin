@@ -1,17 +1,17 @@
 {
   "name": "rhao92-the-bus-telemetry-interface",
   "version": "2.15.0-beta.18",
-  "description": "Stream Deck plugin for The Bus – telemetry, controls and live vehicle status.",
+  "description": "Free Stream Deck Plugin for The Bus with live telemetry, intelligent vehicle controls and dynamic status feedback.",
   "private": true,
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Rhao92/The-Bus-Telemetry-Interface.git"
+    "url": "git+https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin.git"
   },
   "bugs": {
-    "url": "https://github.com/Rhao92/The-Bus-Telemetry-Interface/issues"
+    "url": "https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/issues"
   },
-  "homepage": "https://github.com/Rhao92/The-Bus-Telemetry-Interface#readme",
+  "homepage": "https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin#readme",
   "scripts": {
     "build": "tsc --noEmit && rollup -c",
     "link": "streamdeck link de.rhao92.thebus-telemetry-interface.sdPlugin",

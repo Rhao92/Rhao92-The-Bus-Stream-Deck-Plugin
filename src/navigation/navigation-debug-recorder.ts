@@ -374,7 +374,7 @@ function formatExport(
     ...context.data
   }));
   const header = [
-    "Rhao92 The Bus Telemetry Interface - Navigation Blackbox",
+    "Rhao92's The Bus Stream Deck Plugin - Navigation Blackbox",
     `Format-Version: ${FORMAT_VERSION}`,
     `Plugin-Version: ${PLUGIN_VERSION}`,
     `Exported: ${new Date(exportedAt).toISOString()}`,

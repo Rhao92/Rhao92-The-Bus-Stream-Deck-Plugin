@@ -42,7 +42,7 @@ assert.equal(packageJson.name, "rhao92-the-bus-telemetry-interface");
 assert.equal(packageJson.version, "2.15.0-beta.18");
 assert.equal(packageLock.version, packageJson.version);
 assert.equal(packageLock.packages[""].version, packageJson.version);
-assert.equal(manifest.Name, "Rhao92’s The Bus Telemetry Interface");
+assert.equal(manifest.Name, "Rhao92's The Bus Stream Deck Plugin");
 assert.equal(manifest.Category, manifest.Name);
 assert.equal(manifest.Author, "Rhao92");
 assert.equal(manifest.Version, "2.15.0.18");

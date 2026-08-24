@@ -1,8 +1,18 @@
 # Changelog
 
-All notable public changes to Rhao92’s The Bus Telemetry Interface are listed
+All notable public changes to Rhao92's The Bus Stream Deck Plugin are listed
 in this file.
 
+## [Unreleased] - 2026-08-24
+
+- Adopted the permanent public name `Rhao92's The Bus Stream Deck Plugin` and
+  added German and English descriptions covering live telemetry, intelligent
+  vehicle controls, dynamic feedback and Stream Deck Mobile.
+- Renamed the public GitHub repository to
+  `Rhao92-The-Bus-Stream-Deck-Plugin` and updated all controllable links while
+  retaining GitHub's redirects for historical URLs.
+- Kept the plugin UUID, all 50 action UUIDs, package identity, settings,
+  profiles, tags and update paths unchanged during the branding update.
 ## [2.15.0.18-beta] - 2026-08-15
 
 - Renamed the configurable action from `Navigation · Pfeil + Entfernung` to
@@ -93,7 +103,7 @@ in this file.
   no longer reports success after silently choosing a different OneDrive/profile folder;
   the key reports `PATH 60S` only after the file size was verified.
 
-## [2.14.1.0] - 2026-08-09
+## 2.14.1.0 - 2026-08-09
 
 First public GitHub beta.
 
@@ -144,5 +154,3 @@ First public GitHub beta.
 - Fan speed is display-only on the tested eCityBus.
 - Elgato validation reports no errors and 111 inherited non-blocking `@2x`
   notices.
-
-[2.14.1.0]: https://github.com/Rhao92/The-Bus-Telemetry-Interface/releases/tag/v2.14.1-public-beta

@@ -3,7 +3,7 @@ import { registerPluginActions } from "./actions/register-actions";
 import { NavigationDebugRecorder } from "./navigation/navigation-debug-recorder";
 
 streamDeck.logger.setLevel("info");
-streamDeck.logger.info("Rhao92’s The Bus Telemetry Interface startet.");
+streamDeck.logger.info("Rhao92's The Bus Stream Deck Plugin startet.");
 
 // Nur im Dev-Zweig: permanenter RAM-Ringpuffer, keinerlei Disk-I/O bis zum
 // ausdruecklichen Druck auf die Navigation-Debug-Taste.

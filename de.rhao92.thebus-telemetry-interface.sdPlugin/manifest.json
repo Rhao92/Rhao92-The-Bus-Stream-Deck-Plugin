@@ -1,6 +1,6 @@
 {
   "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
-  "Name": "Rhao92’s The Bus Telemetry Interface",
+  "Name": "Rhao92's The Bus Stream Deck Plugin",
   "Version": "2.15.0.18",
   "Author": "Rhao92",
   "Actions": [
@@ -1017,10 +1017,10 @@
       "DisableAutomaticStates": true
     }
   ],
-  "Category": "Rhao92’s The Bus Telemetry Interface",
+  "Category": "Rhao92's The Bus Stream Deck Plugin",
   "CategoryIcon": "imgs/plugin/category",
   "CodePath": "bin/plugin.js",
-  "Description": "Telemetriegestützte Steuerung und Live-Anzeigen für The Bus auf Stream-Deck-Tasten, Dials und Touchflächen.",
+  "Description": "Kostenloses The Bus Stream Deck Plugin mit Live-Telemetrie, Fahrzeugsteuerung, dynamischen Anzeigen und Stream Deck Mobile.",
   "Icon": "imgs/plugin/marketplace",
   "SDKVersion": 3,
   "Software": {

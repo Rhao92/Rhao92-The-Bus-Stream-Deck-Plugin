@@ -18,7 +18,7 @@ def check(condition: bool, message: str) -> None:
         raise AssertionError(message)
 
 
-check(MANIFEST["Name"] == "Rhao92’s The Bus Telemetry Interface", "Plugin-Name")
+check(MANIFEST["Name"] == "Rhao92's The Bus Stream Deck Plugin", "Plugin-Name")
 check(MANIFEST["Category"] == MANIFEST["Name"], "Einheitliche Kategorie")
 check(MANIFEST["Author"] == "Rhao92", "Plugin-Autor")
 check(MANIFEST["Version"] == "2.15.0.18", "Manifest-Version")
