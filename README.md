@@ -1,23 +1,29 @@
 # Rhao92's The Bus Stream Deck Plugin
 
-**Deutsch:** Rhao92's The Bus Stream Deck Plugin ist ein kostenloses, von
-Rhao92 entwickeltes Stream-Deck-Plugin für **The Bus**. Es verbindet
-Live-Telemetrie mit intelligenter Fahrzeugsteuerung, dynamischen
-Zustandsanzeigen, Fahrplaninformationen und experimenteller Navigation. Ein
-physisches Stream Deck ist optional: Das Plugin funktioniert auch mit Stream
-Deck Mobile auf iPhone und iPad und ist deutlich mehr als eine einfache
-Hotkey-Sammlung.
+**Rhao92's The Bus Stream Deck Plugin** is a free community-made Elgato Stream
+Deck plugin for **The Bus by TML Studios**. It uses live game telemetry for
+vehicle controls, dynamic status feedback, timetable displays, full panels and
+experimental navigation. It works with physical Stream Deck hardware and
+Stream Deck Mobile on iPhone and iPad.
 
-**English:** Rhao92's The Bus Stream Deck Plugin is a free advanced telemetry
-and vehicle control plugin for **The Bus**. It provides live telemetry,
-intelligent controls, dynamic status feedback, timetable information and
-experimental navigation. Physical Stream Deck hardware is optional because
-the plugin also works with Stream Deck Mobile on iPhone and iPad. It is much
-more than a simple hotkey collection for The Bus simulator.
+**Deutsch:** Rhao92's The Bus Stream Deck Plugin ist ein kostenloses
+Community-Plugin für **The Bus von TML Studios**. Es verbindet echte
+Live-Telemetrie mit Fahrzeugsteuerung, dynamischen Zustandsanzeigen,
+Fahrplaninformationen, Fullpanels und experimenteller Navigation für Elgato
+Stream Deck und Stream Deck Mobile.
 
 > **Public Beta `2.15.0.18`**
 > The current public beta is available on GitHub. Newer local changes remain
 > test-only until their practical checks and separate release approval.
+
+[Download Public Beta 2.15.0.18 (ZIP)](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/download/v2.15.0.18-beta/Rhao92-The-Bus-Telemetry-Interface-2.15.0.18-beta.zip)
+· [Release notes](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/tag/v2.15.0.18-beta)
+· [Report a bug](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/issues/new?template=bug_report.md)
+
+![Rhao92's The Bus Stream Deck Plugin showing live vehicle telemetry, timetable controls and navigation on Stream Deck](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/download/v2.15.0.18-beta/Preview.jpg)
+
+This is an independent community project by Rhao92. It is not an official
+product of, affiliated with or endorsed by TML Studios or Elgato.
 
 [Deutsch](#deutsch) · [English](#english)
 
@@ -25,7 +31,8 @@ more than a simple hotkey collection for The Bus simulator.
 
 ### Status und Kompatibilität
 
-Diese Version ist ein Beta-Kandidat. Anzeigen ändern sich grundsätzlich
+Diese Version ist eine veröffentlichte öffentliche Beta mit 50
+telemetriebasierten Actions. Anzeigen ändern sich grundsätzlich
 erst nach bestätigter Rückmeldung aus dem Spiel; das Plugin simuliert keine
 Fahrzeugzustände.
 
@@ -43,20 +50,60 @@ einzelne Anzeigen und Bedienfunktionen beeinflussen.
   iPhone oder iPad
 - Für Regler und Fullpanel ein Stream Deck +
 
-### Installation
+### Download und Installation
 
-1. Unter **Releases** die Datei mit der Endung `.streamDeckPlugin`
-   herunterladen.
-2. Die Datei doppelt anklicken.
+1. Die geprüfte
+   [Public Beta 2.15.0.18 als ZIP herunterladen](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/download/v2.15.0.18-beta/Rhao92-The-Bus-Telemetry-Interface-2.15.0.18-beta.zip).
+2. Das ZIP entpacken und die enthaltene Datei mit der Endung
+   `.streamDeckPlugin` doppelt anklicken.
 3. Installation oder Update in der Stream-Deck-Software bestätigen.
 4. The Bus starten und einen Bus vollständig laden.
 5. Die gewünschten Actions auf das Stream Deck ziehen. Konfigurierbare
    Actions werden im Property Inspector eingestellt.
 
-Diese Beta verwendet die vollständig anonymisierte UUID-Familie
-`de.rhao92.thebus-telemetry-interface`. Sie wird von Stream Deck als neues
-Plugin behandelt; bestehende Profile älterer Versionen müssen einmalig neu
-belegt werden.
+Das ZIP enthält außerdem `README.md`, `PATCHLOG.txt` und `ROADMAP.txt`. Die
+vollständige Beschreibung der Beta steht in den
+[Release Notes](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/tag/v2.15.0.18-beta).
+
+Diese Beta verwendet die stabile Plugin-UUID
+`de.rhao92.thebus-telemetry-interface`. Beim Wechsel von `2.14.1` oder älter
+müssen Actions wegen der früheren Identität einmalig neu zugewiesen werden.
+Updates ab `2.15.0.17-beta` verwenden dieselbe Identität und verhalten sich wie
+normale Updates.
+
+### Live-Telemetrie und Fahrzeuganzeigen
+
+Geschwindigkeit, Tempolimit, Leistung, Akkustand, Gang, Zündung,
+Feststellbremse, Blinker und Warnblinker werden aus verfügbaren Spieldaten
+dargestellt. Die gemeinsame Statuslogik unterscheidet `OFFLINE`, `NO_BUS`,
+`BUS_NOT_READY`, `BUS_READY` und `MISSION_READY`.
+
+### Fahrzeugsteuerung
+
+Das The Bus Stream Deck Plugin bündelt unter anderem Gangwahl, Zündung,
+Feststellbremse, Blinker, Warnblinker, Scheibenwischer, Retarder,
+Sonnenblende, Außenbeleuchtung und Fahrgastraumlicht. Ein Tastendruck allein
+beweist keinen Zustand; die sichtbare Rückmeldung kommt aus dem Spiel.
+
+### Türen und Kneeling
+
+Enthalten sind Einzeltüren, Door All, Türfreigabe, automatisches Türschließen,
+Kneeling, Auto-Kneeling und Rollstuhlrampe. Door All unterscheidet geschlossen,
+offen, gemischt und Bewegung. Das normale Kneeling-Symbol folgt dem echten
+mechanischen Zustand.
+
+### Navigation
+
+Die experimentelle Navigation bietet Manöver, Manöverdistanz, nächsten Halt,
+Gesamt- und Reststrecke, Linienfortschritt, ETA, Prognose-Delta und
+Prognosesicherheit. Unsichere Routenzuordnungen oder Manöver bleiben neutral,
+anstatt eine Richtung zu raten.
+
+### Fullpanels und Statusanzeigen
+
+Fahrzeug-, Fahrplan- und Navigations-Fullpanels nutzen die vier
+Reglersegmente des Stream Deck + als zusammenhängende Ansicht. Ergänzend gibt
+es Keypad-Anzeigen und einzelne Regler für unterstützte Funktionen.
 
 ### Funktionsübersicht
 
@@ -127,14 +174,16 @@ Action-Eintrag in der Stream-Deck-Software gibt den benötigten Controller vor.
 - Die Elgato-Validierung meldet keine Fehler. 111 geerbte Hinweise betreffen
   fehlende `@2x`-Varianten älterer Icons und blockieren diese Beta nicht.
 
-### Feedback und Fehler melden
+### Feedback und 60-Sekunden-Navigationsdiagnose
 
 Bitte für Fehler den
 [Bug-Report](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/issues/new?template=bug_report.md)
 und für neue Ideen den
 [Feature-Request](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/issues/new?template=feature_request.md)
-verwenden. Busmodell, Linie/Route, Stream-Deck-Modell und Plugin-Version helfen
-bei der Einordnung erheblich.
+verwenden. Plugin-Version, Busmodell, Linie/Route, Haltestelle oder
+Straßenabschnitt und Stream-Deck-Modell helfen bei der Einordnung. Bei
+Navigationsproblemen kann die manuell erstellte 60-Sekunden-TXT angehängt
+werden; private Daten sollten vorher entfernt werden.
 
 ### Aus dem Quellcode bauen
 
@@ -146,15 +195,18 @@ npm run build
 npm run pack
 ```
 
-Das erzeugte Installationspaket ist für Tests gedacht. Für normale Nutzer ist
-der vorbereitete Installer unter **Releases** der bevorzugte Download.
+Das erzeugte Installationspaket ist für Entwicklungstests gedacht. Für normale
+Nutzer ist der geprüfte Installer unter den
+[GitHub Releases](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases)
+der bevorzugte Download.
 
 ## English
 
 ### Status and compatibility
 
-This release is a beta candidate. Displays only change after confirmed in-game
-feedback; the plugin does not simulate vehicle states.
+This release is a published public beta with 50 telemetry-based actions.
+Displays only change after confirmed in-game feedback; the plugin does not
+simulate vehicle states.
 
 **Testing currently covers only the MB eCitaro / MB eCityBus 18-metre,
 four-door model.** Other bus models may work but have not been officially
@@ -169,18 +221,59 @@ displays and controls.
 - Optional physical Stream Deck hardware or Stream Deck Mobile on iPhone and
   iPad; Stream Deck + is required for dials and the full panel
 
-### Installation
+### Download and installation
 
-1. Download the `.streamDeckPlugin` file from **Releases**.
-2. Double-click the downloaded file.
+1. Download the verified
+   [Public Beta 2.15.0.18 ZIP](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/download/v2.15.0.18-beta/Rhao92-The-Bus-Telemetry-Interface-2.15.0.18-beta.zip).
+2. Extract the ZIP and double-click the included `.streamDeckPlugin` file.
 3. Confirm installation or update in the Stream Deck application.
 4. Start The Bus and load a bus completely.
 5. Add the required actions to your Stream Deck. Configure dropdown actions in
    the Property Inspector.
 
-This beta uses the fully anonymized UUID family
-`de.rhao92.thebus-telemetry-interface`. Stream Deck therefore treats it as a
-new plugin, and profiles from older releases must be configured once again.
+The ZIP also contains `README.md`, `PATCHLOG.txt` and `ROADMAP.txt`. See the
+[complete release notes](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/tag/v2.15.0.18-beta)
+for the verified beta scope.
+
+This beta uses the stable plugin UUID
+`de.rhao92.thebus-telemetry-interface`. Users upgrading from `2.14.1` or older
+must assign their actions once because those versions used a previous
+identity. Updates from `2.15.0.17-beta` onward use the same identity and behave
+as normal updates.
+
+### Live telemetry and vehicle displays
+
+Speed, speed limit, power, battery, gear, ignition, parking brake, indicators
+and hazard lights are shown from available game data. The shared runtime state
+distinguishes `OFFLINE`, `NO_BUS`, `BUS_NOT_READY`, `BUS_READY` and
+`MISSION_READY`.
+
+### Vehicle controls
+
+The Bus Stream Deck Plugin includes gear selection, ignition, parking brake,
+indicators, hazard lights, wipers, retarder, sun blind, exterior lighting and
+passenger lighting. A key press alone does not prove a state; visible feedback
+comes from the game.
+
+### Doors and kneeling
+
+Available actions include individual doors, Door All, door clearance,
+automatic door closing, kneeling, automatic kneeling and wheelchair ramp.
+Door All distinguishes closed, open, mixed and moving doors. The regular
+kneeling icon follows the real mechanical state.
+
+### Navigation
+
+Experimental navigation provides maneuver, maneuver distance, next stop,
+total and remaining distance, line progress, ETA, predicted schedule delta and
+confidence. Uncertain route matches or maneuvers remain neutral instead of
+guessing a direction.
+
+### Full panels and status displays
+
+Vehicle, timetable and navigation full panels use all four Stream Deck + dial
+segments as one continuous view. Keypad displays and individual dials are also
+available for supported functions.
 
 ### Feature overview
 
@@ -245,14 +338,15 @@ entry identifies whether it requires a key or encoder.
 - Elgato validation reports no errors. The 111 inherited notices concern
   missing `@2x` variants of older icons and do not block this beta.
 
-### Feedback and bug reports
+### Feedback and 60-second navigation diagnostics
 
 Use the
 [bug report](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/issues/new?template=bug_report.md)
 for defects and the
 [feature request](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/issues/new?template=feature_request.md)
-for new ideas. Plugin version, bus model, line/route and Stream Deck model make
-reports much easier to evaluate.
+for new ideas. Include the plugin version, bus model, line/route, stop or road
+section and Stream Deck model. For navigation problems, attach the manually
+created 60-second TXT after removing any private information.
 
 ### Building from source
 
@@ -265,4 +359,8 @@ npm run pack
 ```
 
 The resulting package is intended for development tests. Regular users should
-prefer the prepared installer under **Releases**.
+prefer the verified installer under
+[GitHub Releases](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases).
+
+Rhao92's The Bus Stream Deck Plugin is an independent community project and is
+not an official TML Studios or Elgato product.

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Download the current public beta
+    url: https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/tag/v2.15.0.18-beta
+    about: Download the verified ZIP and read the complete release notes.
+  - name: Installation and compatibility
+    url: https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin#readme
+    about: Check requirements, installation, tested vehicles and known limitations.

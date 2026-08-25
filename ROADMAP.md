@@ -2,8 +2,9 @@
 
 ## Current beta candidate
 
-`2.15.0.18-beta` is prepared from the verified development build and is not yet
-published on GitHub.
+`2.15.0.18-beta` is the current public GitHub pre-release. Newer local
+navigation and Fullpanel work remains test-only until its practical checks and
+separate release approval.
 
 Implemented and technically verified:
 
@@ -48,6 +49,13 @@ Practically confirmed:
 
 - additional navigation and route robustness based on public beta reports
 - broader bus compatibility mappings backed by real telemetry captures
+- investigate a minimal, versioned local route catalogue after legal clearance;
+  the Hamburg installation proves line, route, timetable and ordered
+  course-trip relationships, while equivalent Berlin coverage remains open
+- validate the visible in-game course number against the static tour name on
+  several lines and day categories before using it for any multi-trip forecast
+- keep unknown, missing or outdated static data neutral and retain official
+  telemetry as the only source of live vehicle and mission state
 - remaining icon-density cleanup, including inherited `@2x` notices
 - Elgato Marketplace evaluation only after the public beta is sufficiently
   tested; no Marketplace release is planned for this step

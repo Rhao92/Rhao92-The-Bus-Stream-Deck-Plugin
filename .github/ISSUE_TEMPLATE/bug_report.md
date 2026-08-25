@@ -26,6 +26,15 @@ assignees: ""
 
 <!-- Line, direction and relevant stop or road section -->
 
+## Navigation diagnostic
+
+<!--
+For navigation problems, attach the TXT created by the visible diagnostic
+action after the problem occurs. It contains approximately the preceding
+60 seconds. Remove private information before uploading. Write "not
+applicable" for non-navigation problems.
+-->
+
 ## Expected behavior
 
 <!-- What should have happened? -->
