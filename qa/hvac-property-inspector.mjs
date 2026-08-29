@@ -63,6 +63,10 @@ function createHarness(action, initialMode) {
     }
   }
   const context = vm.createContext({
+    TheBusI18n: {
+      setLanguage() {},
+      text(value) { return value; },
+    },
     document: {
       getElementById(id) {
         if (id === "mode") return modeSelect;

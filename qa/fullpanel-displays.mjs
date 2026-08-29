@@ -1,12 +1,19 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
+const localizationSource = await readFile(
+  new URL("../src/core/localization.ts", import.meta.url),
+  "utf8",
+);
+const localizationUrl = `data:text/javascript;base64,${Buffer.from(localizationSource).toString("base64")}`;
 const sourceModule = async (relativePath) => {
-  const source = await readFile(new URL(relativePath, import.meta.url), "utf8");
+  const source = (await readFile(new URL(relativePath, import.meta.url), "utf8"))
+    .replace('from "../core/localization";', `from "${localizationUrl}";`);
   return import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`);
 };
 const { createViewModel } = await sourceModule("../src/fullpanel/view-model.ts");
 const {
+  formatBatteryPercent,
   renderKeypad,
   renderSinglePanel,
   renderTimetableKeypad,
@@ -29,12 +36,14 @@ function vehicleView(speed, allowedSpeed) {
 }
 
 const baseView = {
+  language: "de",
+  runtimeState: "mission-ready",
   connectionLabel: "LIVE",
   stopName: "Spandauer Str./Marienkirche",
   arrival: "10:51",
   departure: "10:52",
   deltaText: "+0:37",
-  ingameTime: "10:50",
+  ingameTime: "10:50:12",
   status: "PÜNKTLICH",
   stopRequest: false,
 };
@@ -44,13 +53,13 @@ const expectedPanelText = new Map([
   ["arrival", "10:51"],
   ["departure", "10:52"],
   ["delta", "+0:37"],
-  ["ingame", "10:50"],
+  ["ingame", "10:50:12"],
   ["status", "PÜNKTLICH"],
 ]);
 
 for (const [kind, expected] of expectedPanelText) {
   const svg = svgFromDataUri(renderSinglePanel(baseView, kind));
-  assert.match(svg, /2\.15 BETA/);
+  assert.match(svg, />2\.16<\/text>/);
   assert.ok(svg.includes(expected), `${kind} enthält ${expected}`);
 }
 
@@ -122,18 +131,29 @@ assert.match(missingLimitSvg, />--</);
 const electric = {
   ...normal,
   power: "−39,8 kW",
-  batteryPercent: 78,
+  powerSource: "direct",
+  batteryPercent: 78.4,
 };
 const powerSvg = svgFromDataUri(renderKeypad(electric, "power"));
 assert.match(powerSvg, />−39,8</);
 assert.match(powerSvg, />kW</);
 assert.doesNotMatch(powerSvg, /LEISTUNG|POWER/);
 
+const averageConsumptionSvg = svgFromDataUri(renderKeypad({
+  ...electric,
+  power: "82,4 kWh/100 km",
+  powerSource: "average-consumption",
+}, "power"));
+assert.match(averageConsumptionSvg, />82,4</);
+assert.match(averageConsumptionSvg, />Ø kWh\/100 km</);
+
 const batterySvg = svgFromDataUri(renderKeypad(electric, "battery"));
-assert.match(batterySvg, />78%</);
+assert.equal(formatBatteryPercent(78.4), "78,4%");
+assert.equal(formatBatteryPercent(100), "100,0%");
+assert.match(batterySvg, />78,4%</);
 assert.equal((batterySvg.match(/data-battery-cell=/g) ?? []).length, 0);
 assert.equal((batterySvg.match(/data-battery-fill=/g) ?? []).length, 1);
-assert.match(batterySvg, /data-battery-fill="continuous"[^>]*width="68\.6"/);
+assert.match(batterySvg, /data-battery-fill="continuous"[^>]*width="69"/);
 assert.doesNotMatch(batterySvg, /AKKU|BATTER/);
 
 const emptyBatterySvg = svgFromDataUri(renderKeypad({
@@ -191,7 +211,7 @@ const expectedButtonText = new Map([
   ["arrival", "10:51"],
   ["departure", "10:52"],
   ["delta", "+0:37"],
-  ["ingame", "10:50"],
+  ["ingame", "10:50:12"],
   ["status", "PÜNKTLICH"],
 ]);
 
@@ -199,7 +219,7 @@ const stopButton = svgFromDataUri(renderTimetableKeypad(baseView, "stop"));
 assert.match(stopButton, /width="144" height="144"/);
 assert.match(stopButton, /Spandauer Str\.\//);
 assert.match(stopButton, /Marienkirche/);
-assert.match(stopButton, /2\.15 BETA/);
+assert.match(stopButton, />2\.16<\/text>/);
 
 for (const [kind, expected] of expectedButtonText) {
   const svg = svgFromDataUri(renderTimetableKeypad(baseView, kind));
@@ -248,5 +268,14 @@ const offlineButton = svgFromDataUri(renderTimetableKeypad({
   connectionLabel: "OFFLINE",
 }, "arrival"));
 assert.match(offlineButton, />OFFLINE</);
+
+const englishView = {
+  ...baseView,
+  language: "en",
+  status: "ON TIME",
+};
+assert.match(svgFromDataUri(renderSinglePanel(englishView, "arrival")), />ARRIVAL</);
+assert.match(svgFromDataUri(renderSinglePanel(englishView, "status")), />ON TIME</);
+assert.match(svgFromDataUri(renderTimetableKeypad(englishView, "departure")), />DEPARTURE</);
 
 console.log("single-displays: all tests passed");

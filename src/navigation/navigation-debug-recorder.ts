@@ -13,6 +13,12 @@ import {
   RouteGuidanceHub,
   RouteGuidanceModel
 } from "./route-guidance";
+import {
+  calculateStopPhaseDelta,
+  createViewModel,
+  missionIdentity,
+  reachedStopIdentity
+} from "../fullpanel/view-model";
 
 type StoredSample = {
   at: number;
@@ -68,8 +74,8 @@ export class NavigationDebugExportError extends Error {
   }
 }
 
-const FORMAT_VERSION = 2;
-const PLUGIN_VERSION = "2.15.0.18-beta";
+const FORMAT_VERSION = 3;
+const PLUGIN_VERSION = "2.16.0.21";
 const BUFFER_MS = 60_000;
 const BUFFER_RETENTION_MS = BUFFER_MS + 5_000;
 export const NAVIGATION_DEBUG_OUTPUT_DIRECTORY =
@@ -116,20 +122,86 @@ function jsonSafe<T>(value: T): T | undefined {
   }
 }
 
+const SCHEDULE_DELTA_FIELDS = [
+  "ScheduleDelta",
+  "ScheduleDeviation",
+  "ScheduleDelay",
+  "CurrentDelay",
+  "CurrentDeviation",
+  "TimetableDelta",
+  "TimetableDeviation",
+  "Deviation",
+  "TimeDelta",
+  "Delay",
+  "Delta"
+] as const;
+
+const STOP_TIME_FIELDS = [
+  "ArrivalTime",
+  "DepartureTime",
+  "PlannedArrivalTime",
+  "PlannedDepartureTime",
+  "ActualArrivalTime",
+  "ActualDepartureTime",
+  "EstimatedArrivalTime",
+  "EstimatedDepartureTime"
+] as const;
+
+const WORLD_TIME_FIELDS = [
+  "DateTime",
+  "CurrentDateTime",
+  "GameDateTime",
+  "CurrentTime",
+  "GameTime",
+  "IngameTime",
+  "InGameTime",
+  "WorldTime",
+  "TimeOfDay",
+  "DayTime",
+  "Time"
+] as const;
+
+function selectedTelemetryFields(
+  source: unknown,
+  fields: readonly string[]
+): Record<string, unknown> | undefined {
+  if (!source || typeof source !== "object") return undefined;
+  const record = source as Record<string, unknown>;
+  const selected: Record<string, unknown> = {};
+  for (const field of fields) {
+    if (record[field] !== undefined && record[field] !== null) {
+      selected[field] = jsonSafe(record[field]);
+    }
+  }
+  return Object.keys(selected).length > 0 ? selected : undefined;
+}
+
+function doorSummaries(vehicle: TelemetrySnapshot["vehicle"]): unknown[] | undefined {
+  const doors = vehicle?.doors;
+  if (!Array.isArray(doors)) return undefined;
+  return doors.map((door, index) => ({
+    index,
+    name: clip(door?.Name, 120),
+    open: boolOrUndefined(door?.Open),
+    progress: roundNumber(door?.Progress, 3),
+    stopRequest: boolOrUndefined(door?.StopRequest)
+  }));
+}
+
 /** Nutzt exakt dieselbe aktive PathLanes-Auswahl wie RouteGuidanceEngine. */
 function activeRouteLaneIds(snapshot: TelemetrySnapshot): number[] {
   const route = snapshot.route;
   const candidates: unknown[][] = [];
-  if (Array.isArray(route?.PathLanes)) candidates.push(route.PathLanes);
-  if (Array.isArray(route?.Paths)) {
+  if (Array.isArray(route?.PathLanes) && route.PathLanes.length > 0) {
+    candidates.push(route.PathLanes);
+  } else if (Array.isArray(route?.Paths)) {
     for (const path of route.Paths) {
       if (Array.isArray(path?.PathLanes) && path.PathLanes.length > 0) {
         candidates.push(path.PathLanes);
-        break;
       }
     }
   }
-  return (candidates[0] ?? [])
+  return candidates.flat()
     .map(numberOrUndefined)
     .filter((value): value is number => value !== undefined && value >= 0)
     .map((value) => Math.trunc(value));
@@ -140,7 +212,9 @@ function stopSummary(stop: MissionStop | undefined): Record<string, unknown> {
     name: stop?.StopName ?? stop?.GroupName,
     geo: stop?.GeoLocation,
     arrival: stop?.ArrivalTime,
-    departure: stop?.DepartureTime
+    departure: stop?.DepartureTime,
+    timeFields: selectedTelemetryFields(stop, STOP_TIME_FIELDS),
+    deltaFields: selectedTelemetryFields(stop, SCHEDULE_DELTA_FIELDS)
   };
 }
 
@@ -212,6 +286,10 @@ function buildRouteContext(
       currentStopIndex: snapshot.mission?.CurrentStopIndex,
       nextStopIndex: snapshot.mission?.NextStopIndex,
       lastStopReachedIndex: snapshot.mission?.LastStopReachedIndex,
+      startStopReached: boolOrUndefined(snapshot.mission?.StartStopReached),
+      destinationStopReached: boolOrUndefined(
+        snapshot.mission?.DestinationStopReached
+      ),
       stops: snapshot.mission?.Stops?.map(stopSummary)
     },
     roadmap: {
@@ -228,6 +306,11 @@ function buildRouteContext(
     engineRoute: debug?.polyline
       ? {
         routeSignature: debug.routeSignature,
+        routePathCount: debug.routePathCount,
+        routePathLaneCounts: debug.routePathLaneCounts,
+        routeGeometryScope: debug.routeGeometryScope,
+        orderedStopProjectionStartIndex:
+          debug.orderedStopProjectionStartIndex,
         polyline: jsonSafe(debug.polyline),
         orderedStopProjections: jsonSafe(debug.orderedStopProjections)
       }
@@ -240,7 +323,8 @@ function compactSample(
   model: RouteGuidanceModel,
   at: number,
   routeContextId: string | undefined,
-  laneIds: number[]
+  laneIds: number[],
+  timetableDiagnostic: Record<string, unknown>
 ): Record<string, unknown> {
   const debug = model.debug;
   return {
@@ -273,12 +357,28 @@ function compactSample(
         roll: roundNumber(snapshot.player?.Rotation?.Roll)
       }
     },
+    world: {
+      dateTime: clip(snapshot.world?.DateTime, 80)
+        ?? clip(snapshot.world?.CurrentDateTime, 80)
+        ?? clip(snapshot.world?.GameDateTime, 80),
+      timeFields: selectedTelemetryFields(snapshot.world, WORLD_TIME_FIELDS)
+    },
     vehicle: {
       speed: roundNumber(snapshot.vehicle?.Speed),
       allowedSpeed: roundNumber(snapshot.vehicle?.AllowedSpeed),
       gear: clip(snapshot.vehicle?.Gearbox?.CurrentSelector, 20),
       ignition: boolOrUndefined(snapshot.vehicle?.IgnitionEnabled),
-      engine: boolOrUndefined(snapshot.vehicle?.EngineStarted)
+      engine: boolOrUndefined(snapshot.vehicle?.EngineStarted),
+      isAtStop: boolOrUndefined(snapshot.vehicle?.IsAtStop),
+      atStop: boolOrUndefined(snapshot.vehicle?.AtStop),
+      passengerDoorsOpen: boolOrUndefined(
+        snapshot.vehicle?.PassengerDoorsOpen
+      ),
+      doors: doorSummaries(snapshot.vehicle),
+      deltaFields: selectedTelemetryFields(
+        snapshot.vehicle,
+        SCHEDULE_DELTA_FIELDS
+      )
     },
     mission: {
       className: clip(snapshot.mission?.MissionClassName, 160),
@@ -292,11 +392,19 @@ function compactSample(
       startStopReached: boolOrUndefined(snapshot.mission?.StartStopReached),
       destinationStopReached: boolOrUndefined(
         snapshot.mission?.DestinationStopReached
+      ),
+      deltaFields: selectedTelemetryFields(
+        snapshot.mission,
+        SCHEDULE_DELTA_FIELDS
       )
     },
+    timetableDiagnostic,
     route: {
       activeLaneCount: laneIds.length,
       activeLaneIds: laneIds,
+      pathCount: debug?.routePathCount,
+      pathLaneCounts: debug?.routePathLaneCounts,
+      geometryScope: debug?.routeGeometryScope,
       roadmapFeatureCount: Array.isArray(snapshot.roadmap?.features)
         ? snapshot.roadmap.features.length
         : undefined
@@ -326,10 +434,18 @@ function compactSample(
       ? {
         stage: debug.stage,
         routeSignature: clip(debug.routeSignature),
+        routeUpdateKind: debug.routeUpdateKind,
         routeStableForMs: debug.routeStableForMs,
+        routePathCount: debug.routePathCount,
+        routePathLaneCounts: debug.routePathLaneCounts,
+        routeGeometryScope: debug.routeGeometryScope,
+        orderedStopProjectionStartIndex:
+          debug.orderedStopProjectionStartIndex,
         targetIndex: debug.targetIndex,
         targetName: debug.targetName,
+        targetKind: debug.targetKind,
         targetFinal: debug.targetFinal,
+        targetOperationallyReached: debug.targetOperationallyReached,
         currentAlong: roundNumber(debug.currentAlong),
         rawAlong: roundNumber(debug.rawAlong),
         projectionDistance: roundNumber(debug.projectionDistance),
@@ -337,6 +453,10 @@ function compactSample(
         segmentStartAlong: roundNumber(debug.segmentStartAlong),
         segmentEndAlong: roundNumber(debug.segmentEndAlong),
         stopAlong: roundNumber(debug.stopAlong),
+        guidanceStopAlong: roundNumber(debug.guidanceStopAlong),
+        projectedNextStopDistance: roundNumber(
+          debug.projectedNextStopDistance
+        ),
         nextStopDistance: roundNumber(debug.nextStopDistance),
         stopProjectionCandidates: debug.stopProjectionCandidates,
         maneuverClassificationEnd: roundNumber(debug.maneuverClassificationEnd),
@@ -434,6 +554,11 @@ export class NavigationDebugRecorder {
   private readonly guidanceHub = RouteGuidanceHub.instance;
   private readonly samples: StoredSample[] = [];
   private readonly routeContexts = new Map<string, StoredRouteContext>();
+  private stopPhaseState: Record<string, unknown> = {};
+  private lastDelta: number | undefined;
+  private lastMissionIdentity = "";
+  private lastReachedStopIdentity = "";
+  private reachedStopTrackingInitialized = false;
   private releaseGuidance: (() => void) | undefined;
 
   /** Dev-Blackbox startet einmalig mit dem Plugin und schreibt noch nichts. */
@@ -452,6 +577,98 @@ export class NavigationDebugRecorder {
   clear(): void {
     this.samples.length = 0;
     this.routeContexts.clear();
+    this.resetTimetableDiagnostic();
+  }
+
+  private timetableDiagnostic(snapshot: TelemetrySnapshot): Record<string, unknown> {
+    const currentMissionIdentity = missionIdentity(snapshot.mission) as string;
+    const currentReachedStopIdentity = reachedStopIdentity(snapshot.mission) as string;
+    let stopReachedChanged = false;
+
+    if (currentMissionIdentity !== this.lastMissionIdentity) {
+      this.lastMissionIdentity = currentMissionIdentity;
+      this.stopPhaseState = {};
+      this.lastDelta = undefined;
+      this.lastReachedStopIdentity = currentReachedStopIdentity;
+      this.reachedStopTrackingInitialized = true;
+    } else if (!this.reachedStopTrackingInitialized) {
+      this.lastReachedStopIdentity = currentReachedStopIdentity;
+      this.reachedStopTrackingInitialized = true;
+    } else if (
+      currentReachedStopIdentity
+      && currentReachedStopIdentity !== this.lastReachedStopIdentity
+    ) {
+      this.lastReachedStopIdentity = currentReachedStopIdentity;
+      stopReachedChanged = true;
+    }
+
+    const stopPhase = calculateStopPhaseDelta(
+      snapshot,
+      this.stopPhaseState,
+      { stopReachedChanged }
+    ) as {
+      seconds?: number;
+      source?: string;
+      stop?: MissionStop;
+      arrivalStop?: MissionStop;
+      departureStop?: MissionStop;
+      state?: Record<string, unknown>;
+    };
+    this.stopPhaseState = stopPhase.state ?? {};
+
+    const viewModel = createViewModel(snapshot, this.lastDelta, {
+      stopReachedChanged,
+      stopPhaseDelta: stopPhase.seconds,
+      stopPhaseSource: stopPhase.source,
+      displayStop: stopPhase.stop,
+      arrivalStop: stopPhase.arrivalStop,
+      departureStop: stopPhase.departureStop
+    }) as {
+      stopName?: string;
+      arrival?: string;
+      departure?: string;
+      deltaText?: string;
+      deltaSeconds?: number;
+      deltaSource?: string;
+      ingameTime?: string;
+      status?: string;
+    };
+
+    if (
+      viewModel.deltaSeconds !== undefined
+      && viewModel.deltaSource !== "cached"
+      && viewModel.deltaSource !== "overdue-stop-clock"
+    ) {
+      this.lastDelta = viewModel.deltaSeconds;
+    }
+
+    return {
+      stopReachedChanged,
+      phase: this.stopPhaseState.phase,
+      phaseSource: stopPhase.source,
+      phaseDeltaSeconds: stopPhase.seconds,
+      displayStop: stopSummary(stopPhase.stop),
+      arrivalReference: stopSummary(stopPhase.arrivalStop),
+      departureReference: stopSummary(stopPhase.departureStop),
+      displayed: {
+        stopName: viewModel.stopName,
+        arrival: viewModel.arrival,
+        departure: viewModel.departure,
+        deltaText: viewModel.deltaText,
+        deltaSeconds: viewModel.deltaSeconds,
+        deltaSource: viewModel.deltaSource,
+        ingameTime: viewModel.ingameTime,
+        status: viewModel.status
+      }
+    };
+  }
+
+  private resetTimetableDiagnostic(): void {
+    this.stopPhaseState = {};
+    this.lastDelta = undefined;
+    this.lastMissionIdentity = "";
+    this.lastReachedStopIdentity = "";
+    this.reachedStopTrackingInitialized = false;
   }
 
   record(
@@ -489,7 +706,14 @@ export class NavigationDebugRecorder {
     this.samples.push({
       at: now,
       routeContextId,
-      data: compactSample(snapshot, model, now, routeContextId, laneIds)
+      data: compactSample(
+        snapshot,
+        model,
+        now,
+        routeContextId,
+        laneIds,
+        this.timetableDiagnostic(snapshot)
+      )
     });
     this.trim(now);
   }

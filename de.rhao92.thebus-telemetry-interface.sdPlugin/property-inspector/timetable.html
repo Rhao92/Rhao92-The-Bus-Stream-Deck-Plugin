@@ -68,19 +68,20 @@
     strong { font-weight: 700; }
   </style>
 </head>
-<body>
-  <h1>Fahrplan-Anzeige</h1>
-  <p>Wähle aus, was dieser Regler oder diese Taste anzeigen soll.</p>
+<body data-title-suffix="Fahrplan-Anzeige">
+  <h1 data-i18n="Fahrplan-Anzeige">Fahrplan-Anzeige</h1>
+  <p data-i18n="Wähle aus, was dieser Regler oder diese Taste anzeigen soll.">Wähle aus, was dieser Regler oder diese Taste anzeigen soll.</p>
 
   <fieldset id="panel-options">
-    <label><input type="radio" name="kind" value="stop"><strong>Haltestelle</strong></label>
-    <label><input type="radio" name="kind" value="arrival"><strong>Ankunft</strong></label>
-    <label><input type="radio" name="kind" value="departure"><strong>Abfahrt</strong></label>
-    <label><input type="radio" name="kind" value="delta"><strong>Abweichung</strong></label>
-    <label><input type="radio" name="kind" value="ingame"><strong>Ingame-Zeit</strong></label>
-    <label><input type="radio" name="kind" value="status"><strong>Status</strong></label>
+    <label><input type="radio" name="kind" value="stop"><strong data-i18n="Haltestelle">Haltestelle</strong></label>
+    <label><input type="radio" name="kind" value="arrival"><strong data-i18n="Ankunft">Ankunft</strong></label>
+    <label><input type="radio" name="kind" value="departure"><strong data-i18n="Abfahrt">Abfahrt</strong></label>
+    <label><input type="radio" name="kind" value="delta"><strong data-i18n="Abweichung">Abweichung</strong></label>
+    <label><input type="radio" name="kind" value="ingame"><strong data-i18n="Ingame-Zeit">Ingame-Zeit</strong></label>
+    <label><input type="radio" name="kind" value="status"><strong data-i18n="Status">Status</strong></label>
   </fieldset>
 
+  <script src="i18n.js"></script>
   <script>
     const validKinds = new Set(["stop", "arrival", "departure", "delta", "ingame", "status"]);
     let websocket;
@@ -114,6 +115,7 @@
     showSelection();
 
     function connectElgatoStreamDeckSocket(port, propertyInspectorUUID, registerEvent, info, actionInfo) {
+      TheBusI18n.setLanguage(info);
       context = propertyInspectorUUID;
       try {
         const parsed = JSON.parse(actionInfo);

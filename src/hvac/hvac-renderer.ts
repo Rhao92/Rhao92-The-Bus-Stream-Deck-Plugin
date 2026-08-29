@@ -1,4 +1,5 @@
 import type { HvacDialMode, HvacMode, HvacState } from "../core/hvac";
+import { formatUiDecimal, getDisplayLanguage, translateUi } from "../core/localization";
 
 const COLORS = {
   active: "#38c9ff",
@@ -24,10 +25,10 @@ function dataUri(svg: string): string {
 function temperature(value: number | undefined): string {
   return value === undefined
     ? "--.- °C"
-    : `${value.toFixed(1).replace(".", ",")} °C`;
+    : `${formatUiDecimal(value, 1)} °C`;
 }
 
-function frame(content: string, color: string, title = "KLIMA"): string {
+function frame(content: string, color: string, title = translateUi("climate")): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
   <title>${escapeXml(title)}</title>
   <defs>
@@ -37,7 +38,7 @@ function frame(content: string, color: string, title = "KLIMA"): string {
   <rect x="4" y="4" width="136" height="136" rx="19" fill="#061018" stroke="${color}" stroke-width="3" filter="url(#hvacGlow)"/>
   <rect x="8" y="8" width="128" height="128" rx="16" fill="#02070b" fill-opacity=".84" stroke="#fff" stroke-opacity=".07"/>
   ${content}
-  <text x="135" y="136" text-anchor="end" font-family="Arial,Helvetica,sans-serif" font-size="4" font-weight="700" fill="#fff" fill-opacity=".22">2.15 BETA</text>
+  <text x="135" y="136" text-anchor="end" font-family="Arial,Helvetica,sans-serif" font-size="4" font-weight="700" fill="#fff" fill-opacity=".22">2.16</text>
   </svg>`;
 }
 
@@ -82,9 +83,10 @@ function airflow(color: string): string {
 }
 
 function unavailable(label: string, icon: string): string {
+  const language = getDisplayLanguage();
   return dataUri(frame(`<g opacity=".7">${icon}</g>
   <path d="M31 111L113 29" stroke="${COLORS.unavailable}" stroke-width="7" stroke-linecap="round" filter="url(#hvacGlow)"/>
-  <text x="72" y="124" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="900" fill="${COLORS.value}">--</text>`, COLORS.unavailable, `${label}: NICHT VERFÜGBAR`));
+  <text x="72" y="124" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="900" fill="${COLORS.value}">--</text>`, COLORS.unavailable, `${label}: ${translateUi("not_available", language)}`));
 }
 
 function toggleKey(
@@ -92,8 +94,8 @@ function toggleKey(
   available: boolean,
   enabled: boolean | undefined,
   icon: (color: string) => string,
-  onText = "EIN",
-  offText = "AUS"
+  onText = translateUi("enabled"),
+  offText = translateUi("off")
 ): string {
   if (!available) {
     return unavailable(label, icon(COLORS.unavailable));
@@ -110,8 +112,9 @@ function toggleKey(
 }
 
 function fanKey(mode: "fan" | "fan-down", state: HvacState): string {
+  const language = getDisplayLanguage();
   if (!state.fanAvailable) {
-    return unavailable("LÜFTER", fan(COLORS.unavailable));
+    return unavailable(translateUi("fan", language), fan(COLORS.unavailable));
   }
 
   const color = state.fanControlAvailable ? COLORS.active : COLORS.inactive;
@@ -123,12 +126,13 @@ function fanKey(mode: "fan" | "fan-down", state: HvacState): string {
     ? `<circle cx="108" cy="35" r="16" fill="#061018" stroke="${color}" stroke-width="4"/><text x="108" y="44" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="25" font-weight="900" fill="${color}">${sign}</text>`
     : `<path d="M100 31V26A9 9 0 0 1 118 26V31M97 31H121V50H97Z" fill="#061018" stroke="${color}" stroke-width="4" stroke-linejoin="round"/><circle cx="109" cy="40" r="2.5" fill="${color}"/>`;
   return dataUri(frame(`${fan(color)}${badge}
-  <text x="72" y="124" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="900" fill="${COLORS.value}">${value}</text>`, color, `LÜFTER ${mode === "fan" ? "HÖHER" : "NIEDRIGER"}; ${value}; ${state.fanControlAvailable ? "DREHREGLER" : "NUR ANZEIGE"}`));
+  <text x="72" y="124" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="900" fill="${COLORS.value}">${value}</text>`, color, `${translateUi("fan", language)} ${mode === "fan" ? translateUi("higher", language) : translateUi("lower", language)}; ${value}; ${state.fanControlAvailable ? translateUi("rotate", language) : translateUi("display_only", language)}`));
 }
 
 function ventilationKey(state: HvacState): string {
+  const language = getDisplayLanguage();
   if (!state.ventilationAvailable) {
-    return unavailable("AUTO-VENTILATION", fan(COLORS.unavailable));
+    return unavailable(translateUi("ventilation_auto", language), fan(COLORS.unavailable));
   }
 
   const color = state.ventilationEnabled === true
@@ -136,16 +140,17 @@ function ventilationKey(state: HvacState): string {
     : state.ventilationEnabled === false
       ? COLORS.inactive
       : COLORS.unavailable;
-  const status = state.ventilationEnabled === true ? "EIN" : state.ventilationEnabled === false ? "AUS" : "--";
+  const status = state.ventilationEnabled === true ? translateUi("enabled", language) : state.ventilationEnabled === false ? translateUi("off", language) : "--";
   return dataUri(frame(`${fan(color)}
   <circle cx="108" cy="35" r="16" fill="#061018" stroke="${color}" stroke-width="4"/>
   <text x="108" y="43" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="21" font-weight="900" fill="${color}">A</text>
-  <text x="72" y="124" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="900" fill="${COLORS.value}">${status}</text>`, color, `LÜFTER AUTOMATIK: ${status}`));
+  <text x="72" y="124" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="900" fill="${COLORS.value}">${status}</text>`, color, `${translateUi("ventilation_auto", language)}: ${status}`));
 }
 
 function airflowKey(mode: "airflow-left" | "airflow-right", state: HvacState): string {
+  const language = getDisplayLanguage();
   if (!state.airflowAvailable) {
-    return unavailable("LUFTVERTEILUNG", airflow(COLORS.unavailable));
+    return unavailable(translateUi("airflow", language), airflow(COLORS.unavailable));
   }
 
   const stage = state.airflowStage !== undefined && state.airflowStageCount !== undefined
@@ -156,13 +161,14 @@ function airflowKey(mode: "airflow-left" | "airflow-right", state: HvacState): s
     ? "M94 36H119M108 25L120 36L108 47"
     : "M119 36H94M105 25L93 36L105 47";
   return dataUri(frame(`${airflow(COLORS.active)}<path d="${arrow}" fill="none" stroke="${COLORS.active}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="72" y="124" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="900" fill="${COLORS.value}">${stage}</text>`, COLORS.active, `LUFTVERTEILUNG ${direction === "right" ? "RECHTS" : "LINKS"}; STUFE ${stage}`));
+  <text x="72" y="124" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="900" fill="${COLORS.value}">${stage}</text>`, COLORS.active, `${translateUi("airflow", language)} ${direction === "right" ? translateUi("right", language) : translateUi("left", language)}; ${translateUi("stage", language)} ${stage}`));
 }
 
 export function renderHvacKey(mode: HvacMode, state: HvacState): string {
+  const language = getDisplayLanguage();
   if (mode === "climate") {
     if (!state.climateAvailable && !state.temperatureAvailable) {
-      return unavailable("KLIMA", snowflake(COLORS.unavailable));
+      return unavailable(translateUi("climate", language), snowflake(COLORS.unavailable));
     }
 
     const color = state.climateEnabled === false
@@ -170,21 +176,21 @@ export function renderHvacKey(mode: HvacMode, state: HvacState): string {
       : state.climateEnabled === true
         ? COLORS.active
         : COLORS.unavailable;
-    const status = state.climateEnabled === true ? "EIN" : state.climateEnabled === false ? "AUS" : "--";
+    const status = state.climateEnabled === true ? translateUi("enabled", language) : state.climateEnabled === false ? translateUi("off", language) : "--";
     return dataUri(frame(`${snowflake(color)}${powerBadge(color)}
     <text x="72" y="103" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="900" fill="${COLORS.value}">${escapeXml(temperature(state.temperatureC))}</text>
-    <text x="72" y="126" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="900" fill="${color}">${status}</text>`, color, `KLIMA ${status}; ${temperature(state.temperatureC)}`));
+    <text x="72" y="126" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="900" fill="${color}">${status}</text>`, color, `${translateUi("climate", language)} ${status}; ${temperature(state.temperatureC)}`));
   }
 
   if (mode === "temperature-up" || mode === "temperature-down") {
     if (!state.temperatureAvailable) {
-      return unavailable("TEMPERATUR", `<text x="72" y="84" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="48" font-weight="900" fill="${COLORS.unavailable}">±1°</text>`);
+      return unavailable(translateUi("temperature", language), `<text x="72" y="84" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="48" font-weight="900" fill="${COLORS.unavailable}">±1°</text>`);
     }
 
     const sign = mode === "temperature-up" ? "+1°" : "−1°";
     const color = state.temperatureControlAvailable ? COLORS.active : COLORS.inactive;
     return dataUri(frame(`<text x="72" y="82" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="48" font-weight="900" fill="${COLORS.value}" filter="url(#hvacGlow)">${sign}</text>
-    <text x="72" y="120" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="900" fill="${color}">${escapeXml(temperature(state.temperatureC))}</text>`, color, `TEMPERATUR ${mode === "temperature-up" ? "HÖHER" : "TIEFER"}; ${temperature(state.temperatureC)}`));
+    <text x="72" y="120" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="900" fill="${color}">${escapeXml(temperature(state.temperatureC))}</text>`, color, `${translateUi("temperature", language)} ${mode === "temperature-up" ? translateUi("higher", language) : translateUi("lower", language)}; ${temperature(state.temperatureC)}`));
   }
 
   if (mode === "fan" || mode === "fan-down") {
@@ -198,37 +204,37 @@ export function renderHvacKey(mode: HvacMode, state: HvacState): string {
   }
   if (mode === "ac-mode") {
     if (!state.acModeAvailable || state.coolingEnabled === undefined) {
-      return unavailable("HEIZEN / KÜHLEN", snowflake(COLORS.unavailable));
+      return unavailable(translateUi("heating_cooling", language), snowflake(COLORS.unavailable));
     }
     const cooling = state.coolingEnabled;
     const color = cooling ? COLORS.active : COLORS.warm;
     const icon = cooling
       ? snowflake(color, 72, 62, 31)
       : `<path d="M46 96C35 83 54 75 44 61C34 47 53 39 48 28M72 101C58 86 81 76 68 60C57 46 78 38 72 25M98 96C87 83 106 75 96 61C86 47 105 39 100 28" fill="none" stroke="${color}" stroke-width="7" stroke-linecap="round" filter="url(#hvacGlow)"/>`;
-    const status = cooling ? "KÜHLEN" : "HEIZEN";
+    const status = cooling ? translateUi("cooling", language) : translateUi("heating", language);
     return dataUri(frame(`${icon}
-    <text x="72" y="124" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="900" fill="${COLORS.value}">${status}</text>`, color, `HEIZEN / KÜHLEN: ${status}`));
+    <text x="72" y="124" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="900" fill="${COLORS.value}">${status}</text>`, color, `${translateUi("heating_cooling", language)}: ${status}`));
   }
   if (mode === "rear") {
     if (!state.rearAvailable) {
-      return unavailable("KLIMA HINTEN", rearClimate(COLORS.unavailable));
+      return unavailable(translateUi("rear_climate", language), rearClimate(COLORS.unavailable));
     }
     const color = state.rearEnabled === true ? COLORS.active : state.rearEnabled === false ? COLORS.inactive : COLORS.unavailable;
-    const status = state.rearEnabled === true ? "EIN" : state.rearEnabled === false ? "AUS" : "--";
+    const status = state.rearEnabled === true ? translateUi("enabled", language) : state.rearEnabled === false ? translateUi("off", language) : "--";
     return dataUri(frame(`${rearClimate(color)}${letterBadge("R", color)}
-    <text x="72" y="124" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="900" fill="${COLORS.value}">${status}</text>`, color, `KLIMA HINTEN: ${status}`));
+    <text x="72" y="124" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="900" fill="${COLORS.value}">${status}</text>`, color, `${translateUi("rear_climate", language)}: ${status}`));
   }
   if (mode === "circulation-front") {
     if (!state.frontCirculationAvailable) {
-      return unavailable("UMLUFT VORNE", circulation(COLORS.unavailable, true));
+      return unavailable(translateUi("front_circulation", language), circulation(COLORS.unavailable, true));
     }
     const color = state.frontCirculationEnabled === true ? COLORS.active : state.frontCirculationEnabled === false ? COLORS.inactive : COLORS.unavailable;
-    const status = state.frontCirculationEnabled === true ? "EIN" : state.frontCirculationEnabled === false ? "AUS" : "--";
+    const status = state.frontCirculationEnabled === true ? translateUi("enabled", language) : state.frontCirculationEnabled === false ? translateUi("off", language) : "--";
     return dataUri(frame(`${circulation(color, true)}${letterBadge("F", color)}
-    <text x="72" y="124" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="900" fill="${COLORS.value}">${status}</text>`, color, `UMLUFT VORNE: ${status}`));
+    <text x="72" y="124" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="900" fill="${COLORS.value}">${status}</text>`, color, `${translateUi("front_circulation", language)}: ${status}`));
   }
 
-  return toggleKey("UMLUFT", state.circulationAvailable, state.circulationEnabled, (color) => circulation(color, false));
+  return toggleKey(translateUi("circulation", language), state.circulationAvailable, state.circulationEnabled, (color) => circulation(color, false));
 }
 
 function dialFrame(label: string, value: string, detail: string, color: string): string {
@@ -244,12 +250,13 @@ function dialFrame(label: string, value: string, detail: string, color: string):
 }
 
 export function renderHvacDial(mode: HvacDialMode, state: HvacState): string {
+  const language = getDisplayLanguage();
   if (mode === "temperature") {
     const available = state.temperatureAvailable && state.temperatureControlAvailable;
     return dialFrame(
-      "TEMPERATUR",
+      translateUi("temperature", language),
       temperature(state.temperatureC),
-      available ? "DREHEN · ±1 °C" : "NICHT VERFÜGBAR",
+      available ? `${translateUi("rotate", language)} · ±1 °C` : translateUi("not_available", language),
       available ? COLORS.active : COLORS.unavailable
     );
   }
@@ -258,13 +265,13 @@ export function renderHvacDial(mode: HvacDialMode, state: HvacState): string {
     const readable = state.fanPercent !== undefined;
     const controllable = readable && state.fanControlAvailable;
     return dialFrame(
-      "LÜFTERGESCHWINDIGKEIT",
+      translateUi("fan_speed", language),
       state.fanStagePercent === undefined ? "--" : `${Math.round(state.fanStagePercent)} %`,
       controllable
-        ? "DREHEN · LANGSAMER / SCHNELLER"
+        ? `${translateUi("rotate", language)} · ${translateUi("slower_faster", language)}`
         : readable
-          ? "NUR ANZEIGE"
-          : "NICHT VERFÜGBAR",
+          ? translateUi("display_only", language)
+          : translateUi("not_available", language),
       controllable ? COLORS.active : readable ? COLORS.inactive : COLORS.unavailable
     );
   }
@@ -274,18 +281,19 @@ export function renderHvacDial(mode: HvacDialMode, state: HvacState): string {
     ? `${state.airflowStage} / ${state.airflowStageCount}`
     : "--";
   return dialFrame(
-    "LUFTVERTEILUNG",
+    translateUi("airflow", language),
     stage,
-    available ? "DREHEN · LINKS / RECHTS" : "NICHT VERFÜGBAR",
+    available ? `${translateUi("rotate", language)} · ${translateUi("left_right", language)}` : translateUi("not_available", language),
     available ? COLORS.active : COLORS.unavailable
   );
 }
 
 export function renderHvacDialRuntime(status: "offline" | "no-bus"): string {
+  const language = getDisplayLanguage();
   return dialFrame(
-    "KLIMA",
-    status === "offline" ? "OFFLINE" : "---",
-    status === "offline" ? "TELEMETRIE GETRENNT" : "NICHT IM BUS",
+    translateUi("climate", language),
+    status === "offline" ? translateUi("offline", language) : "---",
+    status === "offline" ? translateUi("telemetry_disconnected", language) : translateUi("no_bus", language),
     COLORS.unavailable
   );
 }

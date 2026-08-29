@@ -16,10 +16,11 @@
     select:focus { border-color: #38c9ff; outline: none; box-shadow: 0 0 0 1px rgb(56 201 255 / 35%); }
   </style>
 </head>
-<body>
-  <h1>Klima</h1>
-  <p id="description">Wähle aus, welche Klimafunktion diese Taste übernimmt.</p>
-  <label for="mode"><span>Funktion</span><select id="mode"></select></label>
+<body data-title-suffix="Klima">
+  <h1 data-i18n="Klima">Klima</h1>
+  <p id="description" data-i18n="Wähle aus, welche Klimafunktion diese Taste übernimmt.">Wähle aus, welche Klimafunktion diese Taste übernimmt.</p>
+  <label for="mode"><span data-i18n="Funktion">Funktion</span><select id="mode"></select></label>
+  <script src="i18n.js"></script>
   <script>
     const HVAC_ACTION = "de.rhao92.thebus-telemetry-interface.hvac-control";
     const HVAC_DIAL_ACTION = "de.rhao92.thebus-telemetry-interface.hvac-dial";
@@ -70,10 +71,10 @@
         for (const [value, label] of dialModes) {
           const option = document.createElement("option");
           option.value = value;
-          option.textContent = label;
+          option.textContent = TheBusI18n.text(label);
           modeSelect.append(option);
         }
-        description.textContent = "Wähle aus, welchen Klimaregler der Stream-Deck-Plus-Drehknopf übernimmt.";
+        description.textContent = TheBusI18n.text("Wähle aus, welchen Klimaregler der Stream-Deck-Plus-Drehknopf übernimmt.");
         return;
       }
 
@@ -83,15 +84,15 @@
         if (category !== groupName) {
           groupName = category;
           group = document.createElement("optgroup");
-          group.label = category;
+          group.label = TheBusI18n.text(category);
           modeSelect.append(group);
         }
         const option = document.createElement("option");
         option.value = value;
-        option.textContent = label;
+        option.textContent = TheBusI18n.text(label);
         group.append(option);
       }
-      description.textContent = "Wähle aus, welche Klimafunktion diese Taste übernimmt.";
+      description.textContent = TheBusI18n.text("Wähle aus, welche Klimafunktion diese Taste übernimmt.");
     }
 
     function showSelection() {
@@ -125,6 +126,7 @@
     });
 
     function connectElgatoStreamDeckSocket(port, propertyInspectorUUID, registerEvent, info, actionInfo) {
+      TheBusI18n.setLanguage(info);
       let parsed = {};
       try {
         parsed = JSON.parse(actionInfo);

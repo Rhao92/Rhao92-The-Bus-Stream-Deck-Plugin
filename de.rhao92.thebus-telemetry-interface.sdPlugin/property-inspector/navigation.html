@@ -16,20 +16,21 @@
     select:focus { border-color: #38c9ff; outline: none; box-shadow: 0 0 0 1px rgb(56 201 255 / 35%); }
   </style>
 </head>
-<body>
+<body data-title-suffix="Navigation">
   <h1>Navigation</h1>
-  <p>Wähle aus, was diese Taste anzeigen soll.</p>
-  <label for="kind"><span>Anzeige</span><select id="kind">
-    <option value="maneuver">Pfeil + Entfernung</option>
-    <option value="maneuver-distance">Legacy · nur Entfernung</option>
-    <option value="next-stop">Nächster Halt</option>
-    <option value="total-distance">Gesamtstrecke</option>
-    <option value="remaining-distance">Reststrecke</option>
-    <option value="route-progress">Linienfortschritt</option>
+  <p data-i18n="Wähle aus, was diese Taste anzeigen soll.">Wähle aus, was diese Taste anzeigen soll.</p>
+  <label for="kind"><span data-i18n="Anzeige">Anzeige</span><select id="kind">
+    <option value="maneuver" data-i18n="Pfeil + Entfernung">Pfeil + Entfernung</option>
+    <option value="maneuver-distance" data-i18n="Legacy · nur Entfernung">Legacy · nur Entfernung</option>
+    <option value="next-stop" data-i18n="Nächster Halt">Nächster Halt</option>
+    <option value="total-distance" data-i18n="Linienlänge">Linienlänge</option>
+    <option value="remaining-distance" data-i18n="Reststrecke">Reststrecke</option>
+    <option value="route-progress" data-i18n="Linienfortschritt">Linienfortschritt</option>
     <option value="eta">ETA</option>
-    <option value="predicted-delta">Prognose-Delta</option>
-    <option value="confidence">Prognosesicherheit</option>
+    <option value="predicted-delta" data-i18n="Prognose-Delta">Prognose-Delta</option>
+    <option value="confidence" data-i18n="Prognosesicherheit">Prognosesicherheit</option>
   </select></label>
+  <script src="i18n.js"></script>
   <script>
     const NAVIGATION_ACTION = "de.rhao92.thebus-telemetry-interface.navigation-maneuver";
     const validKinds = new Set([
@@ -72,6 +73,7 @@
     });
 
     function connectElgatoStreamDeckSocket(port, propertyInspectorUUID, registerEvent, info, actionInfo) {
+      TheBusI18n.setLanguage(info);
       try {
         const parsed = JSON.parse(actionInfo);
         contexts = Array.from(new Set([

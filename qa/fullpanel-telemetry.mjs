@@ -5,7 +5,13 @@ const telemetryPath = new URL(
   "../src/fullpanel/view-model.ts",
   import.meta.url,
 );
-const telemetrySource = await readFile(telemetryPath, "utf8");
+const localizationSource = await readFile(
+  new URL("../src/core/localization.ts", import.meta.url),
+  "utf8",
+);
+const localizationUrl = `data:text/javascript;base64,${Buffer.from(localizationSource).toString("base64")}`;
+const telemetrySource = (await readFile(telemetryPath, "utf8"))
+  .replace('from "../core/localization";', `from "${localizationUrl}";`);
 const telemetryModule = await import(
   `data:text/javascript;base64,${Buffer.from(telemetrySource).toString("base64")}`
 );
@@ -17,6 +23,8 @@ const {
   FULLPANEL_POLL_INTERVALS,
   FullpanelTelemetryClient,
   scheduleDifferenceSeconds,
+  supportsAverageVehicleConsumption,
+  VehicleAverageConsumptionTracker,
 } = telemetryModule;
 
 function stop(name, time, extra = {}) {
@@ -58,6 +66,187 @@ assert.equal(formatVehiclePower("ungueltig"), "–");
 assert.equal(formatVehiclePower("0.1", false), "–");
 
 {
+  const electricVehicle = {
+    VehicleModel: "eCitybus",
+    CurrentFuel: "180",
+    MaxFuel: "243",
+    DisplayFuel: String(180 / 243),
+  };
+  assert.equal(
+    supportsAverageVehicleConsumption(electricVehicle, "BP_Mercedes_eCitaro_18m"),
+    true,
+  );
+  assert.equal(
+    supportsAverageVehicleConsumption({ ...electricVehicle, VehicleModel: "Citybus" }, "BP_Diesel"),
+    false,
+  );
+  assert.equal(
+    supportsAverageVehicleConsumption({ ...electricVehicle, DisplayFuel: "0.5" }, "BP_Mercedes_eCitaro_18m"),
+    false,
+  );
+
+  const tracker = new VehicleAverageConsumptionTracker();
+  const averageSnapshot = (time, currentFuel, speed = 36, extraVehicle = {}) => ({
+    connected: true,
+    online: true,
+    runtimeState: "mission-ready",
+    vehicleReady: true,
+    vehicleId: "BP_Mercedes_eCitaro_18m",
+    player: {
+      Mode: "Vehicle",
+      CurrentVehicle: "BP_Mercedes_eCitaro_18m",
+    },
+    world: { DateTime: time },
+    vehicle: {
+      ...electricVehicle,
+      CurrentFuel: String(currentFuel),
+      DisplayFuel: String(currentFuel / 243),
+      Speed: speed,
+      ...extraVehicle,
+    },
+  });
+
+  assert.equal(
+    tracker.update(averageSnapshot("2026-08-28T12:00:00", 180), 0),
+    undefined,
+  );
+  assert.equal(
+    tracker.update(averageSnapshot("2026-08-28T12:00:05", 179.99), 500),
+    undefined,
+    "Vor 200 Metern bleibt der Fahrtverbrauch neutral",
+  );
+  assert.equal(
+    tracker.update(averageSnapshot("2026-08-28T12:00:10", 179.98), 1_000),
+    undefined,
+  );
+  assert.equal(
+    tracker.update(averageSnapshot("2026-08-28T12:00:15", 179.97), 1_500),
+    undefined,
+  );
+  const consumption = tracker.update(
+    averageSnapshot("2026-08-28T12:00:20", 179.96),
+    2_000,
+  );
+  assert.ok(Math.abs(consumption - 20) < 0.001);
+
+  const nextConsumption = tracker.update(
+    averageSnapshot("2026-08-28T12:00:25", 179.95),
+    2_500,
+  );
+  assert.ok(Math.abs(nextConsumption - 20) < 0.001);
+
+  const stoppedConsumption = tracker.update(
+    averageSnapshot("2026-08-28T12:00:30", 179.95, 0),
+    3_000,
+  );
+  assert.ok(
+    stoppedConsumption > 0,
+    "Stillstand behält den bisher ermittelten Fahrt-Durchschnitt",
+  );
+  assert.equal(
+    tracker.update(averageSnapshot("2026-08-28T12:00:30", 179.95, 0), 8_001),
+    stoppedConsumption,
+    "Auch bei pausierter Spielzeit bleibt der letzte bestätigte Fahrt-Durchschnitt sichtbar",
+  );
+
+  const temporarilyNotReady = averageSnapshot(
+    "2026-08-28T12:00:30",
+    179.95,
+    0,
+  );
+  temporarilyNotReady.runtimeState = "bus-not-ready";
+  temporarilyNotReady.vehicleReady = false;
+  assert.equal(
+    tracker.update(temporarilyNotReady, 8_050),
+    stoppedConsumption,
+    "Ein unvollständiger Fahrzeugzustand am Halt löscht den Fahrtwert nicht",
+  );
+  assert.equal(
+    tracker.update(
+      averageSnapshot("2026-08-28T12:00:30", 179.95, 0, {
+        CurrentFuel: undefined,
+      }),
+      8_075,
+    ),
+    stoppedConsumption,
+    "Eine einzelne fehlende Energieprobe am Halt löscht den Fahrtwert nicht",
+  );
+
+  tracker.reset();
+  assert.equal(
+    tracker.update(averageSnapshot("2026-08-28T12:00:30", 179.95, 0), 8_100),
+    undefined,
+    "Ein manueller Reset startet wieder mit einer neutralen Messbasis",
+  );
+  const resetLearningSamples = [
+    ["2026-08-28T12:00:35", 179.945],
+    ["2026-08-28T12:00:40", 179.935],
+    ["2026-08-28T12:00:45", 179.925],
+    ["2026-08-28T12:00:50", 179.915],
+  ];
+  for (const [index, [time, currentFuel]] of resetLearningSamples.entries()) {
+    assert.equal(
+      tracker.update(averageSnapshot(time, currentFuel, 36), 8_600 + index * 500),
+      undefined,
+      "Nach dem Reset bleibt die neue Messung vor 200 Metern neutral",
+    );
+  }
+  const resetConsumption = tracker.update(
+    averageSnapshot("2026-08-28T12:00:55", 179.905, 36),
+    10_600,
+  );
+  assert.ok(
+    Math.abs(resetConsumption - 20) < 0.001,
+    "Nach der neuen Lernstrecke wird nur der Verbrauch seit dem Reset berechnet",
+  );
+  assert.equal(
+    tracker.update({
+      connected: false,
+      online: true,
+      runtimeState: "no-bus",
+      vehicleReady: false,
+      player: { Mode: "Walking" },
+    }, 11_000),
+    undefined,
+    "Ein bestätigtes Verlassen des Busses beendet die Fahrtmessung",
+  );
+  assert.equal(
+    tracker.update(averageSnapshot("2026-08-28T12:01:00", 179.9, 36), 11_500),
+    undefined,
+    "Beim erneuten Einstieg beginnt eine neue Messbasis",
+  );
+
+  const recuperationTracker = new VehicleAverageConsumptionTracker();
+  assert.equal(
+    recuperationTracker.update(averageSnapshot("2026-08-28T13:00:00", 180), 0),
+    undefined,
+  );
+  for (let seconds = 5; seconds < 20; seconds += 5) {
+    assert.equal(
+      recuperationTracker.update(
+        averageSnapshot(`2026-08-28T13:00:${String(seconds).padStart(2, "0")}`, 180),
+        seconds * 100,
+      ),
+      undefined,
+    );
+  }
+  const recuperation = recuperationTracker.update(
+    averageSnapshot("2026-08-28T13:00:20", 180.02),
+    1_000,
+  );
+  assert.ok(Math.abs(recuperation - -10) < 0.001);
+
+  const directPowerTracker = new VehicleAverageConsumptionTracker();
+  assert.equal(
+    directPowerTracker.update(
+      averageSnapshot("2026-08-28T12:00:26", 179.95, 36, { Powermeter: "0.025" }),
+      2_600,
+    ),
+    undefined,
+  );
+}
+
+{
   const raisedAtStop = createViewModel(
     snapshot({
       vehicle: {
@@ -75,8 +264,15 @@ assert.equal(formatVehiclePower("0.1", false), "–");
   );
   assert.equal(raisedAtStop.mechanicalKneeling, "READY");
   assert.equal(raisedAtStop.power, "−39,8 kW");
-  assert.equal(raisedAtStop.batteryPercent, 96);
+  assert.equal(raisedAtStop.powerSource, "direct");
+  assert.equal(raisedAtStop.batteryPercent, 95.7);
   assert.equal(raisedAtStop.autoKneeling, false);
+  assert.equal(raisedAtStop.ingameTime, "16:51:12");
+
+  const theBusClock = createViewModel(snapshot({
+    worldTime: "2026.09.01-19.03.56",
+  }));
+  assert.equal(theBusClock.ingameTime, "19:03:56");
 
   const autoKneelingEnabled = createViewModel(snapshot({
     vehicle: {
@@ -93,6 +289,32 @@ assert.equal(formatVehiclePower("0.1", false), "–");
   );
   assert.equal(raisedWhileDriving.mechanicalKneeling, "AUS");
   assert.equal(raisedWhileDriving.power, "+45,4 kW");
+
+  const averagedConsumption = createViewModel(
+    snapshot({
+      vehicle: {
+        VehicleModel: "eCitybus",
+        CurrentFuel: "180",
+        MaxFuel: "243",
+        DisplayFuel: String(180 / 243),
+      },
+    }),
+    undefined,
+    { averageConsumptionKwhPer100Km: 82.44 },
+  );
+  assert.equal(averagedConsumption.power, "82,4 kWh/100 km");
+  assert.equal(averagedConsumption.powerSource, "average-consumption");
+
+  const averagePending = createViewModel(snapshot({
+    vehicle: {
+      VehicleModel: "eCitybus",
+      CurrentFuel: "180",
+      MaxFuel: "243",
+      DisplayFuel: String(180 / 243),
+    },
+  }));
+  assert.equal(averagePending.power, "–");
+  assert.equal(averagePending.powerSource, "average-consumption-pending");
 
   const emptyBattery = createViewModel(snapshot({
     vehicle: { DisplayFuel: -0.2 },
@@ -188,6 +410,93 @@ assert.deepEqual(
   ],
   [20, 20, 20],
 );
+
+// Live-Missionen aus The Bus verwenden ebenfalls das Punktformat
+// YYYY.MM.DD-HH.MM.SS. ANK, ABF und Delta müssen daraus direkt entstehen.
+assert.equal(
+  scheduleDifferenceSeconds(
+    "2026-08-31T20:42:55",
+    "2026.08.31-20.42.00",
+  ),
+  -55,
+);
+{
+  const liveStop = stop("Großer Stern", "2026.08.31-20.42.00", {
+    DepartureTime: "2026.08.31-20.43.00",
+  });
+  const view = createViewModel(snapshot({
+    worldTime: "2026-08-31T20:42:55",
+    mission: {
+      CurrentStop: {},
+      CurrentStopIndex: -1,
+      NextStop: { ...liveStop },
+      NextStopIndex: 0,
+      Stops: [{ ...liveStop }],
+    },
+  }));
+  assert.equal(view.arrival, "20:42");
+  assert.equal(view.departure, "20:43");
+  assert.equal(view.deltaText, "−0:55");
+  assert.equal(view.deltaSource, "overdue-stop-clock");
+}
+
+// The Bus 1.2.100790 liefert im Live-Szenario Stedingerweg die realen
+// Stopobjekte korrekt, verwendet fuer LastStopReachedIndex jedoch bereits den
+// Index des Folgehalts. Stopobjekt und {X,Y}-Position muessen deshalb vor dem
+// numerischen Fallback ausgewertet werden.
+{
+  const stedingerweg = stop("Stedingerweg", "2026.09.01-17.21.00", {
+    GeoLocation: { X: 13.452458381652832, Y: 52.537899017333984 },
+  });
+  const kniprodestrasse = stop(
+    "Kniprodestr./Storkower Str.",
+    "2026.09.01-17.22.00",
+    {
+      GeoLocation: { X: 13.449399948120117, Y: 52.536006927490234 },
+    },
+  );
+  const mission = {
+    CurrentStop: { ...stedingerweg },
+    CurrentStopIndex: 1,
+    NextStop: { ...kniprodestrasse },
+    NextStopIndex: 2,
+    LastStopReached: { ...stedingerweg },
+    LastStopReachedIndex: 2,
+    Stops: [
+      stop("Michelangelostr.", "2026.09.01-17.20.00", {
+        GeoLocation: { X: 13.45319652557373, Y: 52.54077911376953 },
+      }),
+      { ...stedingerweg },
+      { ...kniprodestrasse },
+    ],
+  };
+  const liveSnapshot = snapshot({
+    worldTime: "2026-09-01T17:22:21",
+    playerLocation: [52.537899017333984, 13.45245361328125],
+    vehicle: {
+      Speed: 0,
+      IsAtStop: true,
+    },
+    mission,
+  });
+  const phase = calculateStopPhaseDelta(liveSnapshot, {});
+  assert.equal(phase.stop.StopName, "Stedingerweg");
+  assert.equal(phase.state.stopIndex, 1);
+  assert.equal(phase.seconds, -81);
+
+  const view = createViewModel(liveSnapshot, undefined, {
+    stopPhaseDelta: phase.seconds,
+    stopPhaseSource: phase.source,
+    displayStop: phase.stop,
+    arrivalStop: phase.arrivalStop,
+    departureStop: phase.departureStop,
+  });
+  assert.equal(view.stopName, "Stedingerweg");
+  assert.equal(view.arrival, "17:21");
+  assert.equal(view.departure, "17:21");
+  assert.equal(view.deltaText, "−1:21");
+  assert.equal(view.deltaSource, "current-stop-departure");
+}
 
 {
   const leopoldplatz = stop("U Leopoldplatz", "2026-08-19T00:25:30", {

@@ -37,6 +37,11 @@ function latLon(east: number, north: number): [number, number] {
   ];
 }
 
+function missionGeo(east: number, north: number): { X: number; Y: number } {
+  const [latitude, longitude] = latLon(east, north);
+  return { X: longitude, Y: latitude };
+}
+
 function geo(east: number, north: number): [number, number] {
   const point = latLon(east, north);
   return [point[1], point[0]];
@@ -348,7 +353,6 @@ function snapshot(
   const fullpanel = renderFullpanel(
     { runtimeState: "mission-ready" } as any,
     "navigation",
-    false,
     true,
     undefined,
     model
@@ -560,7 +564,6 @@ function snapshot(
   const fullpanel = renderFullpanel(
     { runtimeState: "mission-ready" } as any,
     "navigation",
-    false,
     true,
     undefined,
     model
@@ -616,13 +619,13 @@ function snapshot(
   const fullpanel = renderFullpanel(
     { runtimeState: "mission-ready" } as any,
     "navigation",
-    false,
     true,
     undefined,
     model
   );
   assert.match(fullpanel, /Hertzallee/);
-  assert.match(fullpanel, /AKTIV/);
+  assert.doesNotMatch(fullpanel, /NAV-STATUS/);
+  assert.doesNotMatch(fullpanel, />AKTIV</);
   assert.doesNotMatch(fullpanel, /UNSICHER/);
 }
 
@@ -1423,6 +1426,1073 @@ function snapshot(
   );
 }
 
+// NAV-19: Turmstr./Beusselstr. -> U Turmstraße fuehrt zuerst nach rechts
+// und kurz darauf wieder nach links. Im realen 2.15.0.18-Trace wurde der
+// naehere Rechtsabbieger wegen der dicht folgenden Gegenkurven verworfen und
+// stattdessen bereits der spaetere Linkspfeil als naechstes Manoever verriegelt.
+{
+  const laneIds = [715, 714, 745, 224, 240, 254, 252, 218, 276, 215, 216];
+  const laneFeatures = [
+    feature(715, [
+      [13.337344, 52.527061], [13.337691, 52.527027]
+    ]),
+    feature(714, [
+      [13.337691, 52.527027], [13.338023, 52.526993],
+      [13.338606, 52.526936]
+    ]),
+    feature(745, [
+      [13.338606, 52.526936], [13.338823, 52.526917],
+      [13.338907, 52.526901], [13.338956, 52.526867],
+      [13.338971, 52.526829], [13.338969, 52.52681]
+    ]),
+    feature(224, [
+      [13.338969, 52.52681], [13.338963, 52.526695],
+      [13.338968, 52.526634], [13.339003, 52.526527],
+      [13.339035, 52.526455]
+    ]),
+    feature(240, [
+      [13.339035, 52.526455], [13.33909, 52.52631]
+    ]),
+    feature(254, [
+      [13.33909, 52.52631], [13.33912, 52.526276],
+      [13.339173, 52.526253], [13.339253, 52.526249],
+      [13.339326, 52.52626]
+    ]),
+    feature(252, [
+      [13.33909, 52.52631], [13.339109, 52.526253],
+      [13.339138, 52.52623], [13.3392, 52.526234],
+      [13.339326, 52.52626]
+    ]),
+    feature(218, [
+      [13.339326, 52.52626], [13.339418, 52.526268],
+      [13.339491, 52.526264], [13.339752, 52.526241],
+      [13.339851, 52.52623], [13.340101, 52.526199],
+      [13.340267, 52.526173]
+    ]),
+    feature(276, [
+      [13.340267, 52.526173], [13.340355, 52.52615],
+      [13.34063, 52.526073]
+    ]),
+    feature(215, [
+      [13.34063, 52.526073], [13.341013, 52.52602]
+    ]),
+    feature(216, [
+      [13.341013, 52.52602], [13.341258, 52.52599]
+    ])
+  ];
+  const stops = [
+    {
+      StopName: "Turmstr./Beusselstr.",
+      GeoLocation: [52.527912, 13.329228] as [number, number]
+    },
+    {
+      StopName: "U Turmstraße",
+      GeoLocation: [52.526005, 13.341144] as [number, number],
+      ArrivalTime: "16:11:00"
+    },
+    {
+      StopName: "S+U Hauptbahnhof",
+      GeoLocation: [52.526314, 13.369007] as [number, number]
+    }
+  ];
+  const mission = {
+    MissionClassName: "TurmstrasseCloseCounterTurns",
+    LastStopReachedIndex: 0,
+    NextStopIndex: 1,
+    NextStop: stops[1],
+    Stops: stops
+  };
+  const current = (now: number) => ({
+    ...snapshot(
+      [[0, 0], [0, 100]],
+      [52.527065, 13.337386],
+      now,
+      0,
+      22
+    ),
+    player: {
+      Mode: "Vehicle",
+      CurrentVehicle: "Bus_Test",
+      GeoLocation: [52.527065, 13.337386]
+    },
+    mission,
+    route: { Paths: [{ PathLanes: laneIds }] },
+    roadmap: { features: laneFeatures }
+  }) as TelemetrySnapshot;
+
+  const engine = new RouteGuidanceEngine();
+  const model = engine.update(current(42_000), 42_000);
+  assert.equal(model.status, "live");
+  assert.equal(model.nextRelevantStop, "U Turmstraße");
+  assert.equal(model.nextManeuver, "right");
+  assert.ok((model.maneuverDistance ?? 0) > 55);
+  assert.ok((model.maneuverDistance ?? Number.POSITIVE_INFINITY) < 130);
+  assert.equal(model.debug?.selectionReason, "detected-maneuver");
+}
+
+// NAV-20: The Bus kuerzt waehrend der Fahrt die aktive Lane-Liste am Anfang.
+// Im gemeldeten Mitschnitt wurden nacheinander 6060, 6062, 6023, 6003, 5999
+// und 5979 entfernt, waehrend der komplette verbleibende Suffix identisch
+// blieb. Diese reine Fortschrittsaktualisierung darf die bestaetigte Route
+// nicht erneut fuer 500 ms sperren und den Geradeauspfeil ausblenden.
+{
+  const laneIds = [
+    6060, 6062, 6023, 6003, 5999, 5979, 5977, 5975,
+    5971, 4996, 1378, 1375, 1372, 1368, 5414, 1369
+  ];
+  const replacementIds = laneIds.map((laneId) => laneId + 20_000);
+  const laneFeatures = [...laneIds, ...replacementIds].map((laneId, index) => {
+    const routeIndex = index % laneIds.length;
+    return feature(laneId, [
+      geo(0, routeIndex * 50),
+      geo(0, (routeIndex + 1) * 50)
+    ]);
+  });
+  const mission = {
+    MissionClassName: "LanePrefixTrimContinuation",
+    LastStopReachedIndex: 0,
+    NextStopIndex: 1,
+    NextStop: {
+      StopName: "Marschallbrücke",
+      GeoLocation: latLon(0, 650),
+      ArrivalTime: "16:21:00"
+    },
+    Stops: [
+      { StopName: "Charité - Campus Mitte", GeoLocation: latLon(0, 0) },
+      {
+        StopName: "Marschallbrücke",
+        GeoLocation: latLon(0, 650),
+        ArrivalTime: "16:21:00"
+      }
+    ]
+  };
+  const capture = (
+    activeLaneIds: number[],
+    playerNorth: number,
+    now: number
+  ): TelemetrySnapshot => ({
+    ...snapshot(
+      [[0, 0], [0, 800]],
+      latLon(0, playerNorth),
+      now,
+      0,
+      30
+    ),
+    mission,
+    route: { Paths: [{ PathLanes: activeLaneIds }] },
+    roadmap: { features: laneFeatures }
+  });
+
+  const engine = new RouteGuidanceEngine();
+  let model = engine.update(capture(laneIds, 20, 100_000), 100_000);
+  assert.equal(model.debug?.routeUpdateKind, "initial");
+  model = engine.update(capture(laneIds, 20, 100_600), 100_600);
+  assert.equal(model.nextManeuver, "straight");
+  assert.ok(model.activeManeuver);
+
+  for (let removed = 1; removed <= 6; removed += 1) {
+    const now = 100_600 + removed * 1_000;
+    model = engine.update(
+      capture(laneIds.slice(removed), removed * 50 + 5, now),
+      now
+    );
+    assert.equal(model.status, "live");
+    assert.equal(model.nextManeuver, "straight");
+    assert.ok(model.activeManeuver);
+    assert.equal(model.debug?.routeUpdateKind, "prefix-trim-continuation");
+    assert.equal(model.debug?.straightChecks?.routeStable, true);
+    assert.ok((model.debug?.routeStableForMs ?? 0) >= now - 100_000);
+  }
+
+  // Gegenprobe: Andere Lane-IDs mit nur optisch gleicher Geometrie sind keine
+  // bestaetigte Fortsetzung. Ein echter Routenersatz behaelt die 500-ms-Sperre.
+  const replacementEngine = new RouteGuidanceEngine();
+  replacementEngine.update(capture(laneIds, 20, 200_000), 200_000);
+  model = replacementEngine.update(capture(laneIds, 20, 200_600), 200_600);
+  assert.equal(model.nextManeuver, "straight");
+  model = replacementEngine.update(
+    capture(replacementIds, 25, 200_700),
+    200_700
+  );
+  assert.equal(model.debug?.routeUpdateKind, "replacement");
+  assert.equal(model.debug?.straightChecks?.routeStable, false);
+  assert.equal(model.activeManeuver, undefined);
+}
+
+// NAV-29A: Wenn The Bus bereits abgefahrene Prefix-Lanes entfernt, muss ein
+// verriegeltes Manoever auf die neue Suffix-Polyline umgerechnet werden. Sonst
+// wandert sein alter Along-Wert bei jedem Trim wieder vor den Bus und kann wie
+// im 26.08.-Trace 54,5 s lang die inzwischen gegensaetzliche Geometrie anzeigen.
+{
+  const laneIds = [41, 42, 43, 44];
+  const laneFeatures = [
+    feature(41, [geo(0, 0), geo(0, 100)]),
+    feature(42, [geo(0, 100), geo(0, 200)]),
+    feature(43, [geo(0, 200), geo(0, 300)]),
+    feature(44, [geo(0, 300), geo(80, 300), geo(160, 300)])
+  ];
+  const stops = [
+    { StopName: "Start", GeoLocation: latLon(0, 0) },
+    {
+      StopName: "Nach dem Abbieger",
+      GeoLocation: latLon(160, 300),
+      ArrivalTime: "16:25:00"
+    }
+  ];
+  const capture = (
+    activeLaneIds: number[],
+    playerNorth: number,
+    now: number
+  ): TelemetrySnapshot => ({
+    ...snapshot([[0, 0], [0, 500]], latLon(0, playerNorth), now, 0, 30),
+    mission: {
+      MissionClassName: "LatchedManeuverPrefixTrim",
+      LastStopReachedIndex: 0,
+      NextStopIndex: 1,
+      NextStop: stops[1],
+      Stops: stops
+    },
+    route: { Paths: [{ PathLanes: activeLaneIds }] },
+    roadmap: { features: laneFeatures }
+  });
+
+  const engine = new RouteGuidanceEngine();
+  engine.update(capture(laneIds, 50, 108_000), 108_000);
+  let model = engine.update(capture(laneIds, 50, 108_600), 108_600);
+  assert.ok(["left", "right", "sharp-left", "sharp-right"].includes(model.nextManeuver));
+  const maneuverKind = model.nextManeuver;
+  const beforeTrimDistance = model.maneuverDistance ?? Number.POSITIVE_INFINITY;
+
+  model = engine.update(capture(laneIds.slice(1), 110, 109_600), 109_600);
+  assert.equal(model.debug?.routeUpdateKind, "prefix-trim-continuation");
+  assert.equal(model.nextManeuver, maneuverKind);
+  assert.ok((model.maneuverDistance ?? Number.POSITIVE_INFINITY) < beforeTrimDistance);
+}
+
+// NAV-29B: Auch ein Kaltstart waehrend der verfruehten Missionsumschaltung
+// darf den unmittelbar folgenden Halt nicht ueberspringen. Der Bus steht am
+// Start, die Missionsobjekte nennen aber bereits das uebernaechste Ziel.
+{
+  const now = 110_000;
+  const stops = [
+    { StopName: "Erreichter Halt", GeoLocation: latLon(0, 0) },
+    { StopName: "Echster Folgehalt", GeoLocation: latLon(0, 500) },
+    { StopName: "Zu frueh gemeldeter Halt", GeoLocation: latLon(0, 1_000) }
+  ];
+  const capture = {
+    ...snapshot([[0, 0], [0, 1_000]], latLon(0, 0), now, 1, 0),
+    mission: {
+      MissionClassName: "PrematureMissionAdvanceColdStart",
+      CurrentStopIndex: 1,
+      NextStopIndex: 2,
+      LastStopReachedIndex: 1,
+      CurrentStop: stops[1],
+      NextStop: stops[2],
+      LastStopReached: stops[1],
+      Stops: stops
+    }
+  } as TelemetrySnapshot;
+  const engine = new RouteGuidanceEngine();
+  const model = engine.update(capture, now);
+  assert.equal(model.status, "live");
+  assert.equal(model.nextRelevantStop, "Echster Folgehalt");
+  assert.ok((model.nextRelevantStopDistance ?? 0) > 495);
+  assert.ok((model.nextRelevantStopDistance ?? Number.POSITIVE_INFINITY) < 505);
+}
+
+// NAV-21A: Marschallbruecke -> S+U Brandenburger Tor enthaelt vor dem Halt
+// einen langen Linksbogen und kurz danach eine kleine Gegenkurve. Im realen
+// Mitschnitt vom 24.08.2026 wurde die Gegenkurve als S-Paar angehaengt, obwohl
+// gemeinsame Paar kein ausgehendes Peilfenster mehr vorhanden war. Dadurch
+// blieb 49,7 s lang das Haltestellensymbol statt des Linkspfeils sichtbar.
+{
+  const laneIds = [1344, 3113, 1448, 3157, 3153, 3149];
+  const laneFeatures = [
+    feature(1344, [
+      [13.380103, 52.51757], [13.380136, 52.517303],
+      [13.380218, 52.516735]
+    ]),
+    feature(3113, [
+      [13.380218, 52.516735], [13.380254, 52.516586],
+      [13.380322, 52.516426], [13.38033, 52.516411]
+    ]),
+    feature(1448, [
+      [13.38033, 52.516411], [13.380365, 52.516365],
+      [13.380426, 52.516327], [13.380444, 52.516323],
+      [13.380515, 52.516315], [13.380644, 52.516319]
+    ]),
+    feature(3157, [
+      [13.380644, 52.516319], [13.381257, 52.51635],
+      [13.381378, 52.516354]
+    ]),
+    feature(3153, [
+      [13.381378, 52.516354], [13.381536, 52.516354],
+      [13.381725, 52.516346]
+    ]),
+    feature(3149, [
+      [13.381725, 52.516346], [13.382185, 52.516373]
+    ])
+  ];
+  const stops = [
+    {
+      StopName: "Marschallbrücke",
+      GeoLocation: [52.520313, 13.379681] as [number, number]
+    },
+    {
+      StopName: "S+U Brandenburger Tor",
+      GeoLocation: [52.516365, 13.382061] as [number, number],
+      ArrivalTime: "16:23:00"
+    },
+    {
+      StopName: "U Unter den Linden",
+      GeoLocation: [52.516724, 13.389123] as [number, number]
+    }
+  ];
+  const now = 107_000;
+  const current = {
+    ...snapshot(
+      [[0, 0], [0, 100]],
+      [52.516945, 13.380235],
+      now,
+      0,
+      8.65
+    ),
+    player: {
+      Mode: "Vehicle",
+      CurrentVehicle: "Bus_Test",
+      GeoLocation: [52.516945, 13.380235]
+    },
+    mission: {
+      MissionClassName: "BrandenburgerTorMissingLeftTurn",
+      LastStopReachedIndex: 0,
+      NextStopIndex: 1,
+      NextStop: stops[1],
+      Stops: stops
+    },
+    route: { Paths: [{ PathLanes: laneIds }] },
+    roadmap: { features: laneFeatures }
+  } as TelemetrySnapshot;
+  const model = new RouteGuidanceEngine().update(current, now);
+  assert.equal(model.status, "live");
+  assert.equal(model.nextRelevantStop, "S+U Brandenburger Tor");
+  assert.equal(model.nextManeuver, "left");
+  assert.ok((model.maneuverDistance ?? 0) > 10);
+  assert.ok((model.maneuverDistance ?? Number.POSITIVE_INFINITY) < 40);
+  assert.equal(model.debug?.selectionReason, "detected-maneuver");
+}
+
+// NAV-21B: Spandauer Str./Marienkirche -> Alexanderplatz liefert zwei Gruppen
+// paralleler Lane-Alternativen. Im Mitschnitt vom 24.08.2026 gewann zeitweise
+// der rueckwaerts aufgebaute Kandidat; der Endhalt lag damit rechnerisch hinter
+// dem Bus und Pfeil sowie Haltestellendistanz verschwanden fuer 41,2 s.
+{
+  const laneIds = [3247, 3251, 3252, 3253, 3248, 3249, 3250, 1545, 1543];
+  const laneFeatures = [
+    feature(3247, [
+      [13.405349, 52.51989], [13.405589, 52.520008]
+    ]),
+    feature(3251, [
+      [13.405589, 52.520008], [13.405974, 52.520195],
+      [13.40634, 52.52037], [13.407166, 52.520786]
+    ]),
+    feature(3252, [
+      [13.405535, 52.52005], [13.405922, 52.520233],
+      [13.40618, 52.520367], [13.406275, 52.52042],
+      [13.407106, 52.520832]
+    ]),
+    feature(3253, [
+      [13.405561, 52.520027], [13.405947, 52.520214],
+      [13.406308, 52.520393], [13.407136, 52.520809]
+    ]),
+    feature(3248, [
+      [13.407166, 52.520786], [13.407622, 52.521015]
+    ]),
+    feature(3249, [
+      [13.407106, 52.520832], [13.40756, 52.521057]
+    ]),
+    feature(3250, [
+      [13.407136, 52.520809], [13.40759, 52.521038]
+    ]),
+    feature(1545, [
+      [13.407622, 52.521015], [13.407889, 52.521149],
+      [13.407963, 52.521194], [13.408114, 52.521301],
+      [13.40828, 52.521381], [13.408493, 52.521469],
+      [13.408498, 52.521469], [13.40869, 52.521564]
+    ]),
+    feature(1543, [
+      [13.40869, 52.521564], [13.408896, 52.521664]
+    ])
+  ];
+  const stops = [
+    {
+      StopName: "Historischer Linienanfang",
+      GeoLocation: [52.555481, 13.293956] as [number, number]
+    },
+    {
+      StopName: "Spandauer Str./Marienkirche",
+      GeoLocation: [52.519955, 13.405481] as [number, number]
+    },
+    {
+      StopName: "S+U Alexanderplatz/Memhardstr.",
+      GeoLocation: [52.52161, 13.408789] as [number, number],
+      ArrivalTime: "16:30:00"
+    }
+  ];
+  const now = 108_000;
+  const player = [52.519928, 13.405416] as [number, number];
+  const current = {
+    ...snapshot([[0, 0], [0, 100]], player, now, 1, 13.43),
+    player: {
+      Mode: "Vehicle",
+      CurrentVehicle: "Bus_Test",
+      GeoLocation: player
+    },
+    mission: {
+      MissionClassName: "AlexanderplatzParallelLaneDirection",
+      LastStopReachedIndex: 1,
+      NextStopIndex: 2,
+      NextStop: stops[2],
+      Stops: stops
+    },
+    route: { Paths: [{ PathLanes: laneIds }] },
+    roadmap: { features: laneFeatures }
+  } as TelemetrySnapshot;
+  const model = new RouteGuidanceEngine().update(current, now);
+  assert.equal(model.status, "live");
+  assert.equal(model.nextRelevantStop, "S+U Alexanderplatz/Memhardstr.");
+  assert.ok(
+    (model.nextRelevantStopDistance ?? 0) > 200,
+    JSON.stringify({
+      nextRelevantStopDistance: model.nextRelevantStopDistance,
+      nextManeuver: model.nextManeuver,
+      selectionReason: model.debug?.selectionReason,
+      rejectReason: model.debug?.rejectReason,
+      currentAlong: model.debug?.currentAlong,
+      stopAlong: model.debug?.stopAlong,
+      polyline: model.debug?.polyline
+    })
+  );
+  assert.ok(
+    (model.nextRelevantStopDistance ?? Number.POSITIVE_INFINITY) < 330
+  );
+  assert.equal(model.nextManeuver, "destination");
+  assert.equal(model.debug?.selectionReason, "stop-fallback");
+  assert.ok((model.debug?.polyline?.maximumGap ?? Number.POSITIVE_INFINITY) < 1);
+  assert.ok(
+    (model.debug?.currentAlong ?? Number.POSITIVE_INFINITY)
+      < (model.debug?.stopAlong ?? 0)
+  );
+}
+
+// NAV-22: S+U Hauptbahnhof -> U Turmstraße ist fast zwei Kilometer lang. Rund
+// 620 m vor dem Bus beginnt ein ueber 60 m entwickelter Rechtsbogen. Direkt
+// folgende kleine Gegenkruemmungen liessen sowohl das gemeinsame S-Fenster als
+// auch das bisherige Einzelfenster kollabieren; wegen der 750-m-Sperre blieb
+// dadurch im realen 2.15.0.22-Trace jede der 529 Anweisungen neutral. Die
+// exakte 92-Punkt-Geometrie muss den lang und dicht belegten ersten Bogen als
+// eigenstaendiges leichtes Rechtsmanoever erhalten.
+{
+  const routePoints = [
+    [13.368617, 52.526535], [13.368122, 52.52639], [13.367835, 52.526299],
+    [13.367762, 52.526276], [13.367536, 52.526196], [13.367287, 52.526112],
+    [13.36706, 52.526043], [13.36681, 52.525974], [13.366488, 52.525879],
+    [13.365904, 52.525715], [13.365711, 52.52565], [13.365386, 52.52552],
+    [13.365321, 52.525494], [13.365082, 52.525398], [13.365019, 52.525379],
+    [13.364453, 52.525215], [13.362489, 52.524647], [13.36056, 52.524082],
+    [13.360168, 52.523972], [13.359812, 52.523872], [13.359596, 52.523823],
+    [13.359406, 52.523796], [13.359237, 52.523788], [13.35913, 52.5238],
+    [13.358533, 52.523872], [13.358523, 52.523846], [13.35809, 52.523895],
+    [13.357143, 52.523972], [13.357148, 52.524002], [13.356812, 52.524021],
+    [13.356475, 52.524052], [13.356324, 52.524063], [13.356188, 52.524075],
+    [13.355965, 52.524094], [13.355749, 52.524109], [13.355619, 52.524117],
+    [13.355304, 52.524143], [13.355103, 52.524166], [13.355026, 52.524178],
+    [13.354661, 52.524235], [13.354247, 52.524288], [13.35383, 52.524353],
+    [13.353538, 52.524391], [13.353136, 52.524448], [13.353124, 52.524414],
+    [13.352398, 52.524517], [13.352042, 52.52457], [13.350968, 52.524734],
+    [13.350723, 52.524765], [13.350653, 52.524773], [13.350549, 52.52478],
+    [13.350227, 52.524826], [13.350198, 52.52483], [13.350068, 52.524857],
+    [13.34997, 52.524887], [13.349814, 52.524914], [13.349725, 52.524929],
+    [13.349422, 52.524971], [13.349205, 52.525002], [13.348891, 52.525043],
+    [13.348475, 52.525101], [13.348001, 52.525162], [13.347623, 52.525211],
+    [13.346006, 52.525433], [13.345662, 52.525478], [13.345455, 52.525505],
+    [13.345157, 52.525543], [13.344824, 52.525589], [13.344518, 52.525635],
+    [13.344218, 52.525677], [13.344036, 52.525711], [13.343842, 52.525753],
+    [13.34366, 52.525799], [13.343499, 52.525841], [13.34324, 52.525883],
+    [13.343109, 52.525902], [13.342958, 52.525925], [13.342862, 52.525951],
+    [13.342834, 52.525986], [13.342837, 52.526043], [13.342843, 52.526058],
+    [13.342912, 52.526222], [13.34295, 52.526417], [13.343053, 52.526661],
+    [13.343061, 52.526726], [13.343036, 52.526783], [13.342978, 52.526833],
+    [13.342903, 52.526863], [13.342847, 52.526871], [13.342733, 52.526882],
+    [13.341887, 52.52692], [13.341537, 52.526936]
+  ];
+  const stops = [
+    {
+      StopName: "S+U Hauptbahnhof",
+      GeoLocation: [52.526722, 13.369281] as [number, number]
+    },
+    {
+      StopName: "U Turmstraße",
+      GeoLocation: [52.526924, 13.341758] as [number, number],
+      ArrivalTime: "16:54:00"
+    }
+  ];
+  const now = 109_000;
+  const player = [52.526321, 13.367911] as [number, number];
+  const current = {
+    ...snapshot([[0, 0], [0, 100]], player, now, 0, 47.67),
+    player: {
+      Mode: "Vehicle",
+      CurrentVehicle: "Bus_Test",
+      GeoLocation: player
+    },
+    mission: {
+      MissionClassName: "HauptbahnhofTurmstrasseSustainedCurve",
+      LastStopReachedIndex: 0,
+      NextStopIndex: 1,
+      NextStop: stops[1],
+      Stops: stops
+    },
+    route: { Paths: [{ PathLanes: [0] }] },
+    roadmap: { features: [feature(0, routePoints)] }
+  } as TelemetrySnapshot;
+  const model = new RouteGuidanceEngine().update(current, now);
+  assert.equal(model.status, "live");
+  assert.equal(model.nextRelevantStop, "U Turmstraße");
+  assert.ok((model.nextRelevantStopDistance ?? 0) > 1_950);
+  assert.ok((model.nextRelevantStopDistance ?? Number.POSITIVE_INFINITY) < 2_020);
+  assert.equal(model.nextManeuver, "slight-right");
+  assert.ok((model.maneuverDistance ?? 0) > 580);
+  assert.ok((model.maneuverDistance ?? Number.POSITIVE_INFINITY) < 660);
+  assert.equal(model.debug?.selectionReason, "detected-maneuver");
+}
+
+// NAV-23: Im gemeldeten Anlauf auf S Beusselstr. liegt der Halt innerhalb des
+// geometrischen Ausgangs eines knapp davor beginnenden Linksabbiegers. Der
+// Pfeil muss auf der Anfahrt erhalten bleiben, nach Erreichen seines Ankers
+// aber an das Haltestellensymbol uebergeben. Im 2.15.0.23-Trace hielt die
+// allgemeine Kurvenhysterese den Linkspfeil stattdessen bis 0 m fest. Die sechs
+// Lane-Geometrien entsprechen exakt dem letzten 60-Sekunden-Log.
+{
+  const laneIds = [1290, 1291, 1292, 1301, 1302, 1303];
+  const laneFeatures = [
+    feature(1290, [
+      [13.328671, 52.533787], [13.32867, 52.534019],
+      [13.328669, 52.534237], [13.328669, 52.534401],
+      [13.328669, 52.534592], [13.328668, 52.534748]
+    ]),
+    feature(1291, [
+      [13.328573, 52.533783], [13.328574, 52.534016],
+      [13.328576, 52.534237], [13.328576, 52.534401],
+      [13.328575, 52.534592], [13.328572, 52.534748]
+    ]),
+    feature(1292, [
+      [13.32862, 52.533783], [13.328617, 52.534016],
+      [13.328618, 52.534237], [13.328618, 52.534401],
+      [13.328617, 52.534592], [13.328614, 52.534748]
+    ]),
+    feature(1301, [
+      [13.328572, 52.534748], [13.328569, 52.535065]
+    ]),
+    feature(1302, [
+      [13.328614, 52.534748], [13.328611, 52.535065]
+    ]),
+    feature(1303, [
+      [13.328668, 52.534748], [13.328665, 52.535065]
+    ])
+  ];
+  const stops = [
+    {
+      StopName: "Turmstr./Beusselstr.",
+      GeoLocation: [52.528618, 13.328732] as [number, number]
+    },
+    {
+      StopName: "S Beusselstr.",
+      GeoLocation: [52.534847, 13.328664] as [number, number],
+      ArrivalTime: "16:58:00"
+    },
+    {
+      StopName: "Buchholzweg",
+      GeoLocation: [52.547409, 13.319127] as [number, number]
+    }
+  ];
+  const liveSnapshot = (
+    player: [number, number],
+    now: number
+  ): TelemetrySnapshot => ({
+    ...snapshot([[0, 0], [0, 100]], player, now, 0, 40),
+    player: {
+      Mode: "Vehicle",
+      CurrentVehicle: "Bus_Test",
+      GeoLocation: player
+    },
+    mission: {
+      MissionClassName: "BeusselstrasseStopInsideTurnExit",
+      LastStopReachedIndex: 0,
+      NextStopIndex: 1,
+      NextStop: stops[1],
+      Stops: stops
+    },
+    route: { Paths: [{ PathLanes: laneIds }] },
+    roadmap: { features: laneFeatures }
+  });
+  const engine = new RouteGuidanceEngine();
+  const approaching = engine.update(
+    liveSnapshot([52.534237, 13.328669], 110_000),
+    110_000
+  );
+  assert.equal(approaching.activeManeuver?.kind, "left");
+  assert.ok((approaching.nextRelevantStopDistance ?? 0) > 50);
+  assert.ok((approaching.nextRelevantStopDistance ?? Number.POSITIVE_INFINITY) < 65);
+  assert.ok((approaching.maneuverDistance ?? 0) > 35);
+  assert.ok((approaching.maneuverDistance ?? Number.POSITIVE_INFINITY) < 55);
+
+  // Die Projektion wird wie in der realen Fahrt schrittweise bis an den
+  // Kurvenanker herangefuehrt; dadurch prueft die Regression zugleich die
+  // bestehende Sprung- und Manoeverhysterese.
+  engine.update(liveSnapshot([52.534401, 13.328669], 110_100), 110_100);
+  engine.update(liveSnapshot([52.534592, 13.328669], 110_200), 110_200);
+  const turnReached = engine.update(
+    liveSnapshot([52.534748, 13.328668], 110_300),
+    110_300
+  );
+  assert.equal(turnReached.activeManeuver?.kind, "stop");
+  assert.equal(
+    turnReached.debug?.selectionReason,
+    "stop-after-reached-maneuver"
+  );
+  const arrived = engine.update(
+    liveSnapshot([52.534847, 13.328664], 110_400),
+    110_400
+  );
+  assert.equal(
+    arrived.activeManeuver?.kind,
+    "stop",
+    JSON.stringify({
+      stopDistance: arrived.nextRelevantStopDistance,
+      selectionReason: arrived.debug?.selectionReason,
+      currentAlong: arrived.debug?.currentAlong,
+      stopAlong: arrived.debug?.stopAlong,
+      latchedManeuver: arrived.debug?.latchedManeuver
+    })
+  );
+  assert.ok((arrived.nextRelevantStopDistance ?? Number.POSITIVE_INFINITY) < 1);
+  assert.equal(arrived.debug?.selectionReason, "stop-fallback");
+
+  const settled = engine.update(
+    liveSnapshot([52.534847, 13.328664], 110_500),
+    110_500
+  );
+  assert.equal(settled.activeManeuver?.kind, "stop");
+  const key = Buffer.from(
+    renderNavigationKey(settled, "maneuver").split(",", 2)[1] ?? "",
+    "base64"
+  ).toString("utf8");
+  assert.match(key, />H<\/text>/);
+}
+
+// NAV-24: /routelaneids liefert im Livefall getrennte, geometrisch direkt
+// anschliessende Paths: den orangefarbenen Abschnitt bis zum naechsten Halt
+// und den gelben Rest bis zum Linienende. Beide Bloecke muessen als ein
+// bestaetigter verbleibender Linienweg genutzt werden. Vor NAV-24 brach
+// extractLaneIds() nach dem ersten nichtleeren Path ab.
+{
+  const now = 111_000;
+  const base = snapshot([[0, 0], [0, 1_000]], latLon(0, 100), now);
+  const capture = (
+    firstPath: number[],
+    playerNorth: number,
+    at: number,
+    secondPath: number[] = [2]
+  ): TelemetrySnapshot => ({
+    ...base,
+    player: {
+      Mode: "Vehicle",
+      CurrentVehicle: "Bus_Test",
+      GeoLocation: latLon(0, playerNorth)
+    },
+    routeUpdatedAt: at,
+    updatedAt: at,
+    route: {
+      Paths: [
+        { Color: "FF7300FF", PathLanes: firstPath },
+        { Color: "FFCC00FF", PathLanes: secondPath }
+      ]
+    },
+    roadmap: {
+      features: [
+        feature(0, [geo(0, 0), geo(0, 250)]),
+        feature(1, [geo(0, 250), geo(0, 500)]),
+        feature(2, [geo(0, 500), geo(0, 1_000)])
+      ]
+    }
+  });
+  const engine = new RouteGuidanceEngine();
+  let model = engine.update(capture([0, 1], 100, now), now);
+  assert.equal(model.status, "live");
+  assert.equal(model.routeLaneCount, 3);
+  assert.equal(model.debug?.routePathCount, 2);
+  assert.deepEqual(model.debug?.routePathLaneCounts, [2, 1]);
+  assert.equal(model.debug?.routeGeometryScope, "remaining-line");
+  assert.equal(model.debug?.orderedStopProjectionStartIndex, 0);
+  assert.equal(model.debug?.orderedStopProjections?.length, 3);
+  assert.ok((model.nextRelevantStopDistance ?? 0) > 395);
+  assert.ok((model.nextRelevantStopDistance ?? Number.POSITIVE_INFINITY) < 405);
+  assert.ok((model.totalRouteDistance ?? 0) > 995);
+  assert.ok((model.totalRouteDistance ?? Number.POSITIVE_INFINITY) < 1_005);
+  assert.ok((model.remainingRouteDistance ?? 0) > 895);
+  assert.ok((model.remainingRouteDistance ?? Number.POSITIVE_INFINITY) < 905);
+  assert.equal(model.routeDistanceEstimated, false);
+  assert.ok((model.routeProgress ?? 0) > 0.095);
+  assert.ok((model.routeProgress ?? Number.POSITIVE_INFINITY) < 0.105);
+
+  // The Bus darf nur die Grenze zwischen dem aktuellen und dem folgenden
+  // Path verschieben. Solange die flache Lane-Reihenfolge gleich bleibt, ist
+  // das keine neue Route und darf weder Geometrie noch Pfeil resetten.
+  model = engine.update(capture([0], 100, now + 100, [1, 2]), now + 100);
+  assert.equal(model.debug?.routeUpdateKind, "unchanged");
+  assert.deepEqual(model.debug?.routePathLaneCounts, [1, 2]);
+  assert.equal(model.debug?.routeGeometryScope, "remaining-line");
+  assert.ok((model.routeProgress ?? 0) > 0.095);
+  assert.ok((model.routeProgress ?? Number.POSITIVE_INFINITY) < 0.105);
+  const recorder = NavigationDebugRecorder.instance;
+  recorder.clear();
+  recorder.record(capture([0, 1], 100, now), model, now);
+  const directory = mkdtempSync(join(tmpdir(), "thebus-nav24-debug-"));
+  const exported = recorder.exportLastMinute(now, directory);
+  const debugText = readFileSync(exported.path, "utf8");
+  assert.match(debugText, /"activeLaneCount":3/);
+  assert.match(debugText, /"activeLaneIds":\[0,1,2\]/);
+  assert.match(debugText, /"routePathCount":\s*2/);
+  assert.match(debugText, /"routeGeometryScope":\s*"remaining-line"/);
+  recorder.clear();
+
+  // Bereits abgefahrene Lanes duerfen aus Paths[0] verschwinden, ohne den
+  // bestaetigten restlichen Linienweg oder die Routenkontinuitaet zu verlieren.
+  model = engine.update(capture([1], 300, now + 600), now + 600);
+  assert.equal(model.status, "live");
+  assert.equal(model.routeLaneCount, 2);
+  assert.equal(model.debug?.routeUpdateKind, "prefix-trim-continuation");
+  assert.equal(model.debug?.routeGeometryScope, "remaining-line");
+  assert.equal(model.debug?.orderedStopProjectionStartIndex, 1);
+  assert.equal(model.debug?.orderedStopProjections?.length, 2);
+  assert.ok((model.remainingRouteDistance ?? 0) > 695);
+  assert.ok((model.remainingRouteDistance ?? Number.POSITIVE_INFINITY) < 705);
+}
+
+// NAV-24: Ein zusaetzlicher, aber nicht anschliessender Path darf die
+// bestehende Navigation nicht auf NO ROUTE setzen. Kann die gesamte
+// verbleibende Haltestellenfolge nicht bestaetigt werden, bleibt Paths[0] der
+// neutrale und rueckwaertskompatible Navigationsfallback.
+{
+  const now = 112_000;
+  const base = snapshot([[0, 0], [0, 1_000]], latLon(0, 100), now);
+  const capture: TelemetrySnapshot = {
+    ...base,
+    route: {
+      Paths: [
+        { Color: "FF7300FF", PathLanes: [0] },
+        { Color: "FFCC00FF", PathLanes: [1] }
+      ]
+    },
+    roadmap: {
+      features: [
+        feature(0, [geo(0, 0), geo(0, 500)]),
+        feature(1, [geo(2_000, 2_000), geo(2_000, 2_500)])
+      ]
+    }
+  };
+  const engine = new RouteGuidanceEngine();
+  let model = engine.update(capture, now);
+  assert.equal(model.status, "live");
+  assert.equal(model.routeLaneCount, 2);
+  assert.equal(model.debug?.routeGeometryScope, "next-segment");
+  assert.ok((model.debug?.polyline?.total ?? 0) > 495);
+  assert.ok((model.debug?.polyline?.total ?? Number.POSITIVE_INFINITY) < 505);
+  model = engine.update(capture, now + 600);
+  assert.equal(model.status, "live");
+  assert.equal(model.activeManeuver?.kind, "straight");
+  assert.ok((model.nextRelevantStopDistance ?? 0) > 395);
+  assert.ok((model.nextRelevantStopDistance ?? Number.POSITIVE_INFINITY) < 405);
+}
+
+// NAV-27: Im Live-Trace vom 26.08.2026 bestand Paths[0] nur aus dem kurzen
+// Rest am gerade erreichten Halt. Das nächste echte Missionsziel lag erst im
+// direkt anschließenden Paths[1]. Wenn ein viel späterer Halt die strenge
+// Restlinienbestätigung verhindert, muss der Fallback beide benötigten Paths
+// zielbezogen verbinden statt pauschal am Mini-Path[0] hängen zu bleiben.
+{
+  const now = 112_500;
+  const stops = [
+    { StopName: "Start", GeoLocation: missionGeo(0, 0) },
+    { StopName: "Erreichter Halt", GeoLocation: missionGeo(0, 100) },
+    {
+      StopName: "Echtes nächstes Ziel",
+      GeoLocation: missionGeo(0, 300),
+      ArrivalTime: "2026.08.31-20.42.00"
+    },
+    // Absichtlich nicht auf der gelieferten Restgeometrie: Dadurch scheitert
+    // die strenge Bestätigung der kompletten Restlinie wie im echten Trace.
+    {
+      StopName: "Später unbekannter Abschnitt",
+      GeoLocation: missionGeo(1_000, 1_000)
+    }
+  ];
+  const capture = (playerNorth: number, at: number): TelemetrySnapshot => ({
+    ...snapshot([[0, 0], [0, 600]], latLon(0, playerNorth), at, 1, 30),
+    player: {
+      Mode: "Vehicle",
+      CurrentVehicle: "Bus_Test",
+      GeoLocation: latLon(0, playerNorth)
+    },
+    mission: {
+      MissionClassName: "ShortFirstPathLiveRegression",
+      CurrentStopIndex: 1,
+      // The Bus 1.2.100790 liefert diese Zahlen im Live-Trace mit anderer
+      // Indexbasis: Beide stehen auf 2, obwohl LastStopReached Stops[1] und
+      // NextStop Stops[2] benennt. Die echten Missionsobjekte sind führend.
+      NextStopIndex: 2,
+      LastStopReachedIndex: 2,
+      CurrentStop: stops[1],
+      NextStop: stops[2],
+      LastStopReached: stops[1],
+      Stops: stops
+    },
+    world: { DateTime: "2026-08-31T20:40:00" },
+    route: {
+      Paths: [
+        { Color: "FF7300FF", PathLanes: [0] },
+        { Color: "FFCC00FF", PathLanes: [1] }
+      ]
+    },
+    roadmap: {
+      features: [
+        feature(0, [geo(0, 100), geo(0, 130)]),
+        feature(1, [geo(0, 130), geo(0, 600)])
+      ]
+    }
+  });
+  const engine = new RouteGuidanceEngine();
+  let model = engine.update(capture(105, now), now);
+  assert.equal(model.status, "live");
+  assert.equal(model.debug?.routeGeometryScope, "next-segment");
+  assert.equal(model.debug?.routePathCount, 2);
+  assert.ok((model.nextRelevantStopDistance ?? 0) > 190);
+  assert.ok((model.nextRelevantStopDistance ?? Number.POSITIVE_INFINITY) < 200);
+  assert.notEqual(model.debug?.rejectReason, "no-stop-distance");
+  model = engine.update(capture(110, now + 600), now + 600);
+  // Innerhalb des bestaetigten 300-m-Zielbereichs hat das echte
+  // Haltestellenziel weiterhin Vorrang vor der Geradeausdarstellung.
+  assert.equal(model.nextManeuver, "stop");
+  assert.ok((model.nextRelevantStopDistance ?? 0) > 185);
+  assert.ok((model.nextRelevantStopDistance ?? Number.POSITIVE_INFINITY) < 195);
+}
+
+// NAV-27: Das echte Punktformat der Missionszeit muss auch ETA und
+// Prognose-Delta versorgen; es ist kein unbekanntes Zeitformat.
+{
+  const engine = new RouteGuidanceEngine();
+  let model: RouteGuidanceModel | undefined;
+  for (let second = 0; second <= 6; second += 1) {
+    const now = 113_200 + second * 1_000;
+    const live = snapshot(
+      [[0, 0], [0, 500], [0, 1_000]],
+      latLon(0, 100 + second * 10),
+      now,
+      0,
+      36
+    );
+    live.world = { DateTime: `2026-08-31T20:40:0${second}` };
+    live.mission!.Stops![1].ArrivalTime = "2026.08.31-20.42.00";
+    live.mission!.NextStop = live.mission!.Stops![1];
+    model = engine.update(live, now);
+  }
+  assert.notEqual(model?.estimatedArrivalTime, undefined);
+  assert.notEqual(model?.predictedScheduleDelta, undefined);
+}
+
+// NAV-25: Der Linienstart wird von The Bus als zwei Missionspunkte mit exakt
+// identischer Ankunfts- und Abfahrtszeit geliefert. Dieses reale
+// Missionsmerkmal gilt unabhaengig vom Ortsnamen und kennzeichnet beide
+// Punkte als betriebliches Terminal-/Pausenziel. Innerhalb des Zielbereichs
+// darf eine Terminalkurve das stabile Pausensymbol nicht verdraengen.
+{
+  const now = 113_000;
+  const terminalRoute: Array<[number, number]> = [
+    [0, 0], [0, 100], [100, 100], [200, 100], [300, 100]
+  ];
+  const terminalStops = [
+    {
+      StopName: "Hertzallee",
+      GeoLocation: latLon(100, 100),
+      ArrivalTime: "20:30:00",
+      DepartureTime: "20:30:00"
+    },
+    {
+      StopName: "Hertzallee",
+      GeoLocation: latLon(200, 100),
+      ArrivalTime: "20:30:00",
+      DepartureTime: "20:30:00"
+    },
+    {
+      StopName: "S+U Zoologischer Garten",
+      GeoLocation: latLon(300, 100),
+      ArrivalTime: "20:33:00",
+      DepartureTime: "20:33:00"
+    }
+  ];
+  const terminalSnapshot = (
+    lastReached: number,
+    player: [number, number],
+    at: number,
+    stops = terminalStops
+  ): TelemetrySnapshot => ({
+    ...snapshot(terminalRoute, player, at, Math.max(0, lastReached)),
+    mission: {
+      MissionClassName: "MissionTerminalPair",
+      LastStopReachedIndex: lastReached,
+      NextStopIndex: lastReached + 1,
+      NextStop: stops[lastReached + 1],
+      StartStopReached: true,
+      DestinationStopReached: false,
+      Stops: stops
+    }
+  });
+
+  const engine = new RouteGuidanceEngine();
+  let model = engine.update(
+    terminalSnapshot(-1, latLon(0, 0), now),
+    now
+  );
+  assert.equal(model.status, "live");
+  assert.equal(model.nextRelevantStop, "Hertzallee");
+  assert.equal(model.nextTargetKind, "terminal-pause");
+  assert.equal(model.nextManeuver, "pause");
+  assert.equal(model.activeManeuver?.kind, "pause");
+  assert.equal(model.debug?.targetKind, "terminal-pause");
+  assert.equal(model.debug?.selectionReason, "mission-terminal-pause");
+
+  // Auch der zweite Punkt desselben betrieblichen Terminalpaars bleibt Pause.
+  model = engine.update(
+    terminalSnapshot(0, latLon(100, 100), now + 600),
+    now + 600
+  );
+  assert.equal(model.nextTargetKind, "terminal-pause");
+  assert.equal(model.nextManeuver, "pause");
+  assert.equal(model.activeManeuver?.distance, 0);
+  assert.equal(model.nextRelevantStopDistance, 0);
+  assert.equal(model.debug?.targetOperationallyReached, true);
+  assert.equal(model.debug?.guidanceStopAlong, model.debug?.currentAlong);
+  assert.ok(
+    (model.debug?.projectedNextStopDistance ?? 0) > 50,
+    String(model.debug?.projectedNextStopDistance)
+  );
+  assert.equal(
+    model.debug?.selectionReason,
+    "mission-terminal-pause-reached"
+  );
+
+  const maneuverKey = Buffer.from(
+    renderNavigationKey(model, "maneuver").split(",", 2)[1] ?? "",
+    "base64"
+  ).toString("utf8");
+  assert.match(maneuverKey, /M58 48V90M86 48V90/);
+  assert.doesNotMatch(maneuverKey, />H<\/text>/);
+
+  const stopKey = Buffer.from(
+    renderNavigationKey(model, "next-stop").split(",", 2)[1] ?? "",
+    "base64"
+  ).toString("utf8");
+  assert.match(stopKey, /PAUSENPUNKT/);
+  assert.match(stopKey, /M67 17V33M77 17V33/);
+
+  const fullpanel = renderFullpanel(
+    { runtimeState: "mission-ready" } as any,
+    "navigation",
+    true,
+    undefined,
+    model
+  );
+  assert.match(fullpanel, />PAUSE<\/text>/);
+  assert.match(fullpanel, />PAUSENPUNKT<\/text>/);
+
+  // Live-Regression Ostbahnhof 28.08.2026: Die Mission meldet bereits den
+  // ersten Linienhalt, waehrend ein zuvor gespeicherter Zielzustand noch am
+  // ersten Punkt des Terminalpaares haengt. Der exakt erreichte zweite Punkt
+  // behaelt die Pause nur innerhalb seines Zielbereichs. Nach der Ausfahrt
+  // muss Andreasstr. uebernehmen; ein Pausensymbol mit 0 m darf bei knapp
+  // 48 km/h nicht weiterlaufen.
+  const departureEngine = new RouteGuidanceEngine();
+  departureEngine.update(
+    terminalSnapshot(-1, latLon(0, 0), now + 1_000),
+    now + 1_000
+  );
+  const atSecondTerminal = terminalSnapshot(
+    1,
+    latLon(200, 100),
+    now + 1_600
+  );
+  atSecondTerminal.mission!.LastStopReached = terminalStops[1];
+  atSecondTerminal.mission!.LastStopReachedIndex = 2;
+  model = departureEngine.update(atSecondTerminal, now + 1_600);
+  assert.equal(model.nextRelevantStop, "Hertzallee");
+  assert.equal(model.nextTargetKind, "terminal-pause");
+  assert.equal(model.nextManeuver, "pause");
+  assert.equal(model.nextRelevantStopDistance, 0);
+
+  const afterTerminalDeparture = terminalSnapshot(
+    1,
+    latLon(260, 100),
+    now + 2_600
+  );
+  afterTerminalDeparture.mission!.LastStopReached = terminalStops[1];
+  afterTerminalDeparture.mission!.LastStopReachedIndex = 2;
+  model = departureEngine.update(afterTerminalDeparture, now + 2_600);
+  assert.equal(model.nextRelevantStop, "S+U Zoologischer Garten");
+  assert.equal(model.nextTargetKind, "destination");
+  assert.notEqual(model.nextManeuver, "pause");
+  assert.notEqual(model.debug?.selectionReason, "mission-terminal-pause-reached");
+
+  // Der gleiche Missionsaufbau bleibt auch bei unterschiedlichen sichtbaren
+  // Namen ein Terminalpaar (belegt am Alexanderplatz-Mitschnitt).
+  const namedStops = terminalStops.map((stop) => ({ ...stop }));
+  namedStops[0].StopName = "Alexanderplatz";
+  namedStops[1].StopName = "S+U Alexanderplatz/Memhardstr.";
+  const namedModel = new RouteGuidanceEngine().update(
+    terminalSnapshot(-1, latLon(0, 0), now + 1_200, namedStops),
+    now + 1_200
+  );
+  assert.equal(namedModel.nextTargetKind, "terminal-pause");
+  assert.equal(namedModel.nextManeuver, "pause");
+
+  // Gleiche Positionen oder aehnliche Namen allein reichen nicht: Weichen
+  // die echten Fahrplanzeiten ab, bleibt es ein regulaeres Halteziel.
+  const regularStops = terminalStops.map((stop) => ({ ...stop }));
+  regularStops[1].ArrivalTime = "20:31:00";
+  regularStops[1].DepartureTime = "20:31:00";
+  const regularModel = new RouteGuidanceEngine().update(
+    terminalSnapshot(-1, latLon(0, 0), now + 1_800, regularStops),
+    now + 1_800
+  );
+  assert.equal(regularModel.nextTargetKind, "stop");
+  assert.notEqual(regularModel.nextManeuver, "pause");
+
+  // Lange Rest- und Gesamtstrecken muessen mit Naeherungszeichen auf dem
+  // 144x144-Key innerhalb des sicheren Textbereichs bleiben.
+  const distanceModel: RouteGuidanceModel = {
+    ...model,
+    totalRouteDistance: 11_300,
+    remainingRouteDistance: 11_300,
+    routeDistanceEstimated: true
+  };
+  for (const kind of ["total-distance", "remaining-distance"] as const) {
+    const svg = Buffer.from(
+      renderNavigationKey(distanceModel, kind).split(",", 2)[1] ?? "",
+      "base64"
+    ).toString("utf8");
+    assert.match(svg, /font-size="27\.0"[^>]*>≈11,3 km<\/text>/);
+  }
+}
+
 // NAV-08: Liegt jede Stopprojektion hinter dem Bus, obwohl dessen reale
 // Luftlinie zum Halt deutlich groesser als der Ankunftsradius ist, bleibt die
 // Distanz neutral. Ein geometrischer Widerspruch darf niemals zu 0 m werden.
@@ -1496,8 +2566,41 @@ function snapshot(
     assert.match(svg, /#38c9ff/i);
     assert.doesNotMatch(svg, /#78d83a|#ffc21d|#ff4050/i);
   }
+  assert.match(
+    decode(renderNavigationKey(liveModel, "total-distance")),
+    /LINIENLÄNGE/
+  );
   const deltaSvg = decode(renderNavigationKey(liveModel, "predicted-delta"));
   assert.match(deltaSvg, /#ffc21d/i);
+
+  const fullpanel = renderFullpanel(
+    { runtimeState: "mission-ready" } as any,
+    "navigation",
+    true,
+    undefined,
+    liveModel
+  );
+  assert.match(fullpanel, /data-route-remaining="750 m"/);
+  assert.match(fullpanel, /data-route-progress="25%"/);
+  assert.doesNotMatch(fullpanel, /NAV-STATUS/);
+  assert.match(fullpanel, /font-size="16" font-weight="900" fill="#fff">750 m/);
+  assert.match(fullpanel, /font-size="18" font-weight="900" fill="#fff">25%/);
+  assert.match(fullpanel, /data-route-eta="≈10:02"/);
+  assert.match(fullpanel, /data-route-predicted-delta="\+0:45"/);
+  assert.match(fullpanel, /data-route-confidence="HOCH"/);
+
+  const uncertainFullpanel = renderFullpanel(
+    { runtimeState: "mission-ready" } as any,
+    "navigation",
+    true,
+    undefined,
+    { ...liveModel, status: "stale-route" }
+  );
+  assert.match(uncertainFullpanel, /data-route-remaining="--"/);
+  assert.match(uncertainFullpanel, /data-route-progress="--"/);
+  assert.match(uncertainFullpanel, /data-route-eta="--:--"/);
+  assert.match(uncertainFullpanel, /data-route-predicted-delta="--:--"/);
+  assert.match(uncertainFullpanel, /data-route-confidence="--"/);
 }
 
 // NAV-03: 100 % ist ausschließlich nach bestätigtem Erreichen des Endhalts
@@ -1539,10 +2642,19 @@ function snapshot(
   assert.notEqual(model.predictedScheduleDelta, undefined);
   const previousEta = model.estimatedArrivalSeconds;
 
+  // Ein bloss gemeldeter Objekt-/Indexwechsel darf das Ziel nicht ueberspringen,
+  // solange der Bus den bisherigen Halt raeumlich noch nicht erreicht hat.
   const switchedAt = 37_000;
   model = engine.update(
     snapshot(line, latLon(0, 170), switchedAt, 1),
     switchedAt
+  );
+  assert.equal(model.nextRelevantStop, "Mitte");
+
+  // Erst die echte Annaeherung an den bisherigen Halt bestaetigt den Wechsel.
+  model = engine.update(
+    snapshot(line, latLon(0, 500), switchedAt + 1_000, 1),
+    switchedAt + 1_000
   );
   assert.equal(model.nextRelevantStop, "Ziel");
   assert.notEqual(model.estimatedArrivalTime, undefined);
@@ -1588,7 +2700,42 @@ function snapshot(
   // 10 Hz inklusive beider Fenstergrenzen: 601 Samples fuer exakt 60 s.
   for (let index = 0; index <= 600; index += 1) {
     const at = now - 60_000 + index * 100;
-    recorder.record(snapshot(line, latLon(0, 40), at, 0, 28), model, at);
+    const captured = snapshot(line, latLon(0, 40), at, 0, 28);
+    if (index === 600) {
+      captured.world = {
+        DateTime: "2026.09.01-19.03.56",
+        GameTime: "19:03:56"
+      };
+      captured.vehicle = {
+        ...captured.vehicle,
+        IsAtStop: true,
+        PassengerDoorsOpen: true,
+        ScheduleDelta: -60,
+        doors: [{
+          Name: "Door 1",
+          Open: true,
+          Progress: 0.75,
+          StopRequest: false
+        }]
+      };
+      captured.mission = {
+        ...captured.mission,
+        ScheduleDeviation: -60,
+        CurrentStopIndex: 1,
+        CurrentStop: {
+          StopName: "Mitte",
+          GeoLocation: latLon(0, 500),
+          ArrivalTime: "2026.09.01-19.02.00",
+          DepartureTime: "2026.09.01-19.02.00",
+          PlannedArrivalTime: "2026.09.01-19.02.00",
+          PlannedDepartureTime: "2026.09.01-19.02.00",
+          ActualArrivalTime: "2026.09.01-19.03.00",
+          EstimatedDepartureTime: "2026.09.01-19.03.00",
+          ScheduleDelta: -60
+        } as unknown as NonNullable<TelemetrySnapshot["mission"]>["CurrentStop"]
+      } as unknown as TelemetrySnapshot["mission"];
+    }
+    recorder.record(captured, model, at);
   }
 
   const directory = mkdtempSync(join(tmpdir(), "thebus-nav-debug-"));
@@ -1601,7 +2748,8 @@ function snapshot(
   assert.equal(exported.destination, "custom");
   assert.equal(exported.directory, directory);
   assert.match(text, /Navigation Blackbox/);
-  assert.match(text, /Format-Version: 2/);
+  assert.match(text, /Format-Version: 3/);
+  assert.match(text, /Plugin-Version: 2\.16\.0\.21/);
   assert.match(text, /ROUTE_CONTEXTS_JSON/);
   assert.match(text, /"relevantLaneFeatures"/);
   assert.match(text, /"engineRoute"/);
@@ -1610,6 +2758,18 @@ function snapshot(
   assert.match(text, /"status":"live"/);
   assert.match(text, /"nextRelevantStop"/);
   assert.match(text, /"selectionReason"/);
+  assert.match(text, /"routeUpdateKind":"initial"/);
+  assert.match(text, /"targetKind":"stop"/);
+  assert.match(text, /"timetableDiagnostic"/);
+  assert.match(text, /"phaseSource":"(?:current-stop-departure|stop-phase)"/);
+  assert.match(text, /"deltaSource":"telemetry"/);
+  assert.match(text, /"ScheduleDelta":-60/);
+  assert.match(text, /"ScheduleDeviation":-60/);
+  assert.match(text, /"ActualArrivalTime":"2026\.09\.01-19\.03\.00"/);
+  assert.match(text, /"EstimatedDepartureTime":"2026\.09\.01-19\.03\.00"/);
+  assert.match(text, /"GameTime":"19:03:56"/);
+  assert.match(text, /"name":"Door 1"/);
+  assert.match(text, /"progress":0\.75/);
   assert.doesNotMatch(text, /THIS_SAMPLE_MUST_NOT_BE_EXPORTED/);
   recorder.clear();
 }

@@ -9,6 +9,7 @@ export type TimetableKind =
 export type FullpanelLayer = "timetable" | "vehicle" | "navigation";
 
 export type FullpanelViewModel = {
+  language: "de" | "en";
   online: boolean;
   inVehicle: boolean;
   runtimeState: PluginRuntimeState;
@@ -33,6 +34,7 @@ export type FullpanelViewModel = {
   autoKneeling: boolean;
   mechanicalKneeling: string;
   power: string;
+  powerSource: "direct" | "average-consumption" | "average-consumption-pending" | "unavailable";
 };
 
 export type FullpanelOverlay = {

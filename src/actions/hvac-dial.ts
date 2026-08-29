@@ -24,6 +24,7 @@ import {
   renderHvacDialRuntime
 } from "../hvac/hvac-renderer";
 import { FULLPANEL_LAYOUT } from "../fullpanel/fullpanel-renderer";
+import { translateUi } from "../core/localization";
 
 type HvacDialSettings = {
   mode?: string;
@@ -67,9 +68,9 @@ export class HvacDialAction extends SingletonAction<HvacDialSettings> {
     await Promise.allSettled([
       dial.setFeedbackLayout(FULLPANEL_LAYOUT),
       dial.setTriggerDescription({
-        rotate: "Klima-Regler drehen",
-        push: "Keine Funktion",
-        touch: "Keine Funktion"
+        rotate: translateUi("climate_control_turn"),
+        push: translateUi("no_function"),
+        touch: translateUi("no_function")
       })
     ]);
 

@@ -1,0 +1,225 @@
+{
+  "Name": "Rhao92's The Bus Stream Deck Plugin",
+  "Description": "Free Stream Deck plugin for The Bus by TML Studios with live telemetry, vehicle controls, navigation, full panels, and vehicle status displays.",
+  "de.rhao92.thebus-telemetry-interface.fullpanel": {
+      "Name": "Full panel",
+      "Tooltip": "Full-width dashboard for timetable, vehicle, and navigation across all four Stream Deck + dials.",
+      "Encoder": {
+        "TriggerDescription": {
+          "Rotate": "Display only",
+          "Push": "Switch dashboard (dial 1)",
+          "Touch": "Switch dashboard"
+        }
+      }
+    },
+    "de.rhao92.thebus-telemetry-interface.timetable-panel": {
+      "Name": "Timetable · Single panel",
+      "Tooltip": "One timetable action for stop, arrival, departure, deviation, in-game time, or status.",
+      "Encoder": {
+        "TriggerDescription": {
+          "Rotate": "Display only",
+          "Push": "Display only",
+          "Touch": "Display only"
+        }
+      }
+    },
+    "de.rhao92.thebus-telemetry-interface.timetable-button": {
+      "Name": "Timetable · Key",
+      "Tooltip": "One timetable key for stop, arrival, departure, deviation, in-game time, or status."
+    },
+    "de.rhao92.thebus-telemetry-interface.stop-request": {
+      "Name": "Timetable · Stop request",
+      "Tooltip": "Shows an active stop request from telemetry with synchronized 2 Hz flashing."
+    },
+    "de.rhao92.thebus-telemetry-interface.navigation-maneuver": {
+      "Name": "Navigation",
+      "Tooltip": "Preferred navigation key: dynamic maneuver arrow and matching distance from the same NAV-07-locked maneuver."
+    },
+    "de.rhao92.thebus-telemetry-interface.navigation-maneuver-distance": {
+      "Name": "Navigation · Maneuver distance",
+      "Tooltip": "Hidden legacy display for maneuver distance within the beta UUID family."
+    },
+    "de.rhao92.thebus-telemetry-interface.navigation-next-stop": {
+      "Name": "Navigation · Next stop",
+      "Tooltip": "Shows the next mission-relevant stop and its distance along the route."
+    },
+    "de.rhao92.thebus-telemetry-interface.navigation-remaining-distance": {
+      "Name": "Navigation · Remaining distance",
+      "Tooltip": "Shows the remaining distance along the active route to the end of the line."
+    },
+    "de.rhao92.thebus-telemetry-interface.navigation-route-progress": {
+      "Name": "Navigation · Route progress",
+      "Tooltip": "Shows measured progress along the complete line from the first to the final stop."
+    },
+    "de.rhao92.thebus-telemetry-interface.navigation-eta": {
+      "Name": "Navigation · ETA",
+      "Tooltip": "Shows the estimated arrival at the next stop based on remaining distance and observed driving speed."
+    },
+    "de.rhao92.thebus-telemetry-interface.navigation-predicted-delta": {
+      "Name": "Navigation · Predicted delta",
+      "Tooltip": "Compares the clearly identified ETA estimate with the scheduled arrival; the official timetable deviation remains separate."
+    },
+    "de.rhao92.thebus-telemetry-interface.navigation-confidence": {
+      "Name": "Navigation · Prediction confidence",
+      "Tooltip": "Shows data status and confidence of the current ETA prediction for isolated practical testing."
+    },
+    "de.rhao92.thebus-telemetry-interface.navigation-debug-capture": {
+      "Name": "Navigation · Save diagnostics",
+      "Tooltip": "Beta diagnostics: saves the last 60 seconds as TXT in the Documents subfolder Projects\\The Bus\\NaviDebug."
+    },
+    "de.rhao92.thebus-telemetry-interface.vehicle-speed": {
+      "Name": "Vehicle · Speed",
+      "Tooltip": "Shows current speed: white up to the limit, yellow at +1 to +4, and red from +5 km/h."
+    },
+    "de.rhao92.thebus-telemetry-interface.vehicle-speed-limit": {
+      "Name": "Vehicle · Speed limit",
+      "Tooltip": "Shows the currently reported speed limit as a road sign."
+    },
+    "de.rhao92.thebus-telemetry-interface.vehicle-power": {
+      "Name": "Vehicle · Power",
+      "Tooltip": "Shows available direct power-meter output; on an eBus without a power meter, shows driving consumption from confirmed battery energy and actual distance traveled. Pressing the key resets only this trip average."
+    },
+    "de.rhao92.thebus-telemetry-interface.vehicle-battery": {
+      "Name": "Vehicle · Battery",
+      "Tooltip": "Shows the reported eCitaro battery level from DisplayFuel as a percentage."
+    },
+    "de.rhao92.thebus-telemetry-interface.hvac-control": {
+      "Name": "Climate · Control",
+      "Tooltip": "Vehicle-independent climate key for on/off, target temperature ±1 °C, or the actually reported ventilation control. Display and commands are derived dynamically from buttons and actions."
+    },
+    "de.rhao92.thebus-telemetry-interface.hvac-dial": {
+      "Name": "Climate · Dial",
+      "Tooltip": "Configurable Stream Deck + dial for airflow, target temperature, or fan speed. Commands and display follow the vehicle's real controls.",
+      "Encoder": {
+        "TriggerDescription": {
+          "Rotate": "Turn climate dial",
+          "Push": "No function",
+          "Touch": "No function"
+        }
+      }
+    },
+    "de.rhao92.thebus-telemetry-interface.door-control": {
+      "Name": "Doors · Door control",
+      "Tooltip": "Configurable key for all doors or doors 1 to 4. Display and animation follow confirmed door telemetry."
+    },
+    "de.rhao92.thebus-telemetry-interface.door-clearance": {
+      "Name": "Doors · Door clearance",
+      "Tooltip": "Toggles door clearance; the display follows confirmed ButtonLight telemetry only."
+    },
+    "de.rhao92.thebus-telemetry-interface.automatic-door-closing": {
+      "Name": "Doors · Automatic closing",
+      "Tooltip": "Toggles automatic closing of the rear doors and displays only the confirmed vehicle state."
+    },
+    "de.rhao92.thebus-telemetry-interface.gear-selector": {
+      "Name": "Driving · Gear selection",
+      "Tooltip": "Configurable key for D, N, or R. The active gear is displayed from telemetry only."
+    },
+    "de.rhao92.thebus-telemetry-interface.indicator-control": {
+      "Name": "Driving · Indicators",
+      "Tooltip": "Configurable key for left indicator, right indicator, or hazard lights. The flashing phase follows the real in-game lamp values."
+    },
+    "de.rhao92.thebus-telemetry-interface.ignition": {
+      "Name": "Driving · Ignition",
+      "Tooltip": "Hold as in the bus. Offline, off, ignition, and engine follow EngineStarted/IgnitionEnabled only; contradictory long-press intermediate values are filtered."
+    },
+    "de.rhao92.thebus-telemetry-interface.parking-brake": {
+      "Name": "Driving · Parking brake",
+      "Tooltip": "Toggles the parking brake. The display follows Parking Brake.State or FixingBrake only."
+    },
+    "de.rhao92.thebus-telemetry-interface.retarder-control": {
+      "Name": "Driving · Retarder",
+      "Tooltip": "Shows the actual retarder lever level and uses only retarder events reported by the vehicle. Level up/down, off, or direct level selection can be configured."
+    },
+    "de.rhao92.thebus-telemetry-interface.sun-blind": {
+      "Name": "Driving · Sun blind",
+      "Tooltip": "Press and hold to move the driver's sun blind using reported window-shade events; release to stop. Direction and display follow confirmed state only."
+    },
+    "de.rhao92.thebus-telemetry-interface.wiper-control": {
+      "Name": "Driving · Windshield wiper",
+      "Tooltip": "Shows the actual wiper level and sends WiperUp or WiperDown depending on configuration. No command is sent at confirmed end positions."
+    },
+    "de.rhao92.thebus-telemetry-interface.kneeling-control": {
+      "Name": "Boarding · Kneeling",
+      "Tooltip": "Configurable key for manual or automatic kneeling."
+    },
+    "de.rhao92.thebus-telemetry-interface.ramp": {
+      "Name": "Boarding · Wheelchair ramp",
+      "Tooltip": "Operates the ramp and uses telemetry to show locked, ready, or extended."
+    },
+    "de.rhao92.thebus-telemetry-interface.exterior-light-control": {
+      "Name": "Lights · Exterior lighting",
+      "Tooltip": "Configurable exterior-light key. Light-switch up/down and high beam send mapped events; daytime, parking, headlights, and fog lights remain telemetry-only displays without a confirmed individual event."
+    },
+    "de.rhao92.thebus-telemetry-interface.passenger-light-control": {
+      "Name": "Lights · Passenger compartment",
+      "Tooltip": "Configurable key to toggle, dim, or brighten the passenger-compartment lighting."
+    },
+    "de.rhao92.thebus-telemetry-interface.ticket-control": {
+      "Name": "Ticketing · ATRON control",
+      "Tooltip": "Operates confirmed ATRON keys only: select on-board computer, reported coin keys, and Take Cash Money. Ticket, price, payment, or receipt data are not displayed without real Sales telemetry."
+    },
+    "de.rhao92.thebus-telemetry-interface.gear-drive": {
+      "Name": "Driving · Gear D",
+      "Tooltip": "Engages gear D. The active display follows confirmed gear-selection telemetry only."
+    },
+    "de.rhao92.thebus-telemetry-interface.gear-neutral": {
+      "Name": "Driving · Gear N",
+      "Tooltip": "Engages gear N. The active display follows confirmed gear-selection telemetry only."
+    },
+    "de.rhao92.thebus-telemetry-interface.gear-reverse": {
+      "Name": "Driving · Gear R",
+      "Tooltip": "Engages gear R. The active display follows confirmed gear-selection telemetry only."
+    },
+    "de.rhao92.thebus-telemetry-interface.indicator-left": {
+      "Name": "Driving · Left indicator",
+      "Tooltip": "Operates the left indicator. State and real bright/dark phase follow IndicatorState and Light Indicator Left."
+    },
+    "de.rhao92.thebus-telemetry-interface.indicator-right": {
+      "Name": "Driving · Right indicator",
+      "Tooltip": "Operates the right indicator. State and real bright/dark phase follow IndicatorState and Light Indicator Right."
+    },
+    "de.rhao92.thebus-telemetry-interface.warning-lights": {
+      "Name": "Driving · Hazard lights",
+      "Tooltip": "Toggles the hazard lights. State and real bright/dark phase follow WarningLights and LED Warning."
+    },
+    "de.rhao92.thebus-telemetry-interface.all-doors": {
+      "Name": "Doors · All doors",
+      "Tooltip": "Opens all confirmed closed doors or selectively closes open and moving doors; movement flashes based on telemetry."
+    },
+    "de.rhao92.thebus-telemetry-interface.door-1": {
+      "Name": "Doors · Door 1",
+      "Tooltip": "Opens or closes door 1; state and flashing animation follow confirmed door telemetry only."
+    },
+    "de.rhao92.thebus-telemetry-interface.door-2": {
+      "Name": "Doors · Door 2",
+      "Tooltip": "Opens or closes door 2; state and flashing animation follow confirmed door telemetry only."
+    },
+    "de.rhao92.thebus-telemetry-interface.door-3": {
+      "Name": "Doors · Door 3",
+      "Tooltip": "Opens or closes door 3; state and flashing animation follow confirmed door telemetry only."
+    },
+    "de.rhao92.thebus-telemetry-interface.door-4": {
+      "Name": "Doors · Door 4",
+      "Tooltip": "Opens or closes door 4; state and flashing animation follow confirmed door telemetry only."
+    },
+    "de.rhao92.thebus-telemetry-interface.kneeling": {
+      "Name": "Boarding · Kneeling",
+      "Tooltip": "Operates kneeling; the display follows the actual suspension position."
+    },
+    "de.rhao92.thebus-telemetry-interface.automatic-kneeling": {
+      "Name": "Boarding · Auto kneeling",
+      "Tooltip": "Toggles automatic kneeling. Button and indicator lamp are interpreted inversely; missing telemetry remains offline."
+    },
+    "de.rhao92.thebus-telemetry-interface.passenger-lights": {
+      "Name": "Lights · Passenger compartment",
+      "Tooltip": "Toggles passenger-compartment lighting and displays only confirmed Off, Dimmed, or Bright states."
+    },
+    "de.rhao92.thebus-telemetry-interface.passenger-lights-dim": {
+      "Name": "Lights · Passenger compartment dimmer",
+      "Tooltip": "Turns passenger-compartment lighting on if necessary and dims it; the display remains fully telemetry-driven."
+    },
+    "de.rhao92.thebus-telemetry-interface.passenger-lights-bright": {
+      "Name": "Lights · Passenger compartment brighter",
+      "Tooltip": "Turns passenger-compartment lighting on if necessary and increases brightness; the display remains fully telemetry-driven."
+    }
+}

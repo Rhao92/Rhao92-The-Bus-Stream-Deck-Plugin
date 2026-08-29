@@ -25,6 +25,11 @@ const navigationPropertyInspector = await readFile(
   new URL("property-inspector/navigation.html", pluginRoot),
   "utf8",
 );
+const pluginSource = await readFile(new URL("src/plugin.ts", root), "utf8");
+const fullpanelHubSource = await readFile(
+  new URL("src/fullpanel/view-model-hub.ts", root),
+  "utf8",
+);
 
 const retiredImageActions = new Set([
   "de.rhao92.thebus-telemetry-interface.touch-display",
@@ -39,20 +44,34 @@ const retiredImageActions = new Set([
 ]);
 
 assert.equal(packageJson.name, "rhao92-the-bus-telemetry-interface");
-assert.equal(packageJson.version, "2.15.0-beta.18");
+assert.equal(packageJson.version, "2.16.0");
 assert.equal(packageLock.version, packageJson.version);
 assert.equal(packageLock.packages[""].version, packageJson.version);
 assert.equal(manifest.Name, "Rhao92's The Bus Stream Deck Plugin");
 assert.equal(manifest.Category, manifest.Name);
 assert.equal(manifest.Author, "Rhao92");
-assert.equal(manifest.Version, "2.15.0.18");
+assert.equal(manifest.Version, "2.16.0.21");
 assert.equal(manifest.UUID, "de.rhao92.thebus-telemetry-interface");
 assert.equal(manifest.Actions.length, 50);
+assert.doesNotMatch(
+  JSON.stringify(manifest),
+  /STOP-DEMO|STOP testen|TESTWERT|Regler testen|DRUCK ERKANNT/i,
+);
 assert.ok(manifest.Actions.some((entry) => entry.Controllers?.includes("Keypad")));
 assert.ok(manifest.Actions.some((entry) => entry.Controllers?.includes("Encoder")));
 assert.equal(packageJson.dependencies.pngjs, undefined);
 assert.equal(packageJson.devDependencies["@types/pngjs"], undefined);
 assert.doesNotMatch(packageLockText, /pngjs/i);
+assert.match(
+  pluginSource,
+  /FullpanelViewModelHub\.instance\.start\(\)/,
+  "Die Fahrtverbrauchsauswertung muss bereits beim Pluginstart laufen",
+);
+assert.doesNotMatch(
+  fullpanelHubSource,
+  /listeners\.size\s*===\s*0[\s\S]{0,180}unsubscribeTelemetry/,
+  "Ein Seitenwechsel darf die gemeinsame Fahrtverbrauchsauswertung nicht beenden",
+);
 
 const uuids = manifest.Actions.map((entry) => entry.UUID);
 assert.equal(new Set(uuids).size, uuids.length);
@@ -201,6 +220,7 @@ for (const sourceFile of sourceFiles) {
 assert.deepEqual(new Set(uuids), sourceUuids);
 assert.doesNotMatch(sourceText, /imageBase64|AtronDisplayClient|\bUMG\b|pngjs/i);
 assert.doesNotMatch(sourceText, /FanSpeedFake/i);
+assert.doesNotMatch(sourceText, /STOP-DEMO|TESTWERT|Regler testen|DRUCK ERKANNT/i);
 assert.match(sourceText, /NavigationDebugRecorder\.instance\.start\(\)/);
 assert.match(sourceText, /Die Datei enthaelt die 60 Sekunden VOR dem Tastendruck/);
 assert.match(sourceText, /join\(homedir\(\), "Documents", "Projekte", "The Bus", "NaviDebug"\)/);
@@ -213,13 +233,18 @@ for (const uuid of retiredImageActions) {
   assert.ok(!bundle.includes(uuid), `Entfernte Bild-Action noch im Runtime-Bundle: ${uuid}`);
 }
 assert.doesNotMatch(bundle, /FullpanelTelemetryClient/);
+assert.doesNotMatch(bundle, /STOP-DEMO|TESTWERT|Regler testen|DRUCK ERKANNT/i);
 assert.match(bundle, /GeoJsonRoadmap/);
 assert.doesNotMatch(bundle, /imageBase64|AtronDisplayClient|\bUMG\b|pngjs/i);
 assert.match(bundle, /Light Indicator Left/);
 assert.match(bundle, /Light Indicator Right/);
 assert.match(bundle, /LED Warning/);
 assert.match(bundle, /Powermeter/);
+assert.match(bundle, /CurrentFuel/);
+assert.match(bundle, /MaxFuel/);
 assert.match(bundle, /DisplayFuel/);
+assert.match(bundle, /average-consumption-pending/);
+assert.match(bundle, /resetAverageConsumption/);
 assert.ok(
   bundle.includes("Documents")
     && bundle.includes("Projekte")
@@ -237,7 +262,7 @@ for (const marker of [
   "WindowShadeDown", "WindowShadeUp", "WiperDown", "WiperUp",
   "LightSwitchDown", "LightSwitchUp", "ToggleTravellerLights",
   "Select Boardcomputer", "Coins5", "Coins800", "Take Cash Money",
-  "NUR ANZEIGE", "2.15 BETA", "Navigation Blackbox",
+  "NUR ANZEIGE", "2.16", "Navigation Blackbox",
 ]) {
   assert.match(bundle, new RegExp(marker));
 }

@@ -11,6 +11,7 @@ import {
   NavigationDebugRecorder,
   type NavigationDebugDestinationKind
 } from "../navigation/navigation-debug-recorder";
+import { translateUi } from "../core/localization";
 
 const COLORS = {
   cyan: "#38c9ff",
@@ -36,7 +37,7 @@ function debugKey(label: string, value: string, color: string): string {
   <circle cx="100" cy="88" r="15" fill="#02070b" stroke="${color}" stroke-width="6" filter="url(#glow)"/>
   <text x="72" y="119" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="${valueSize}" font-weight="900" fill="#fff" filter="url(#glow)">${value}</text>
   <text x="72" y="132" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="9" font-weight="800" fill="${color}" opacity=".9">${label}</text>
-  <text x="135" y="136" text-anchor="end" font-family="Arial,Helvetica,sans-serif" font-size="4" font-weight="700" fill="#fff" fill-opacity=".22">2.15 BETA</text>
+  <text x="135" y="136" text-anchor="end" font-family="Arial,Helvetica,sans-serif" font-size="4" font-weight="700" fill="#fff" fill-opacity=".22">2.16</text>
   </svg>`);
 }
 
@@ -70,7 +71,7 @@ export class NavigationDebugCaptureAction extends SingletonAction {
     this.recorder.start();
     await Promise.allSettled([
       key.setTitle(""),
-      key.setImage(debugKey("60 S PUFFER", "NAV LOG", COLORS.cyan))
+      key.setImage(debugKey(translateUi("buffer_60s"), "NAV LOG", COLORS.cyan))
     ]);
   }
 
@@ -84,7 +85,7 @@ export class NavigationDebugCaptureAction extends SingletonAction {
     this.saving = true;
 
     try {
-      await key.setImage(debugKey("BITTE WARTEN", "SAVE", COLORS.neutral));
+      await key.setImage(debugKey(translateUi("please_wait"), "SAVE", COLORS.neutral));
       const result = this.recorder.exportLastMinute();
       streamDeck.logger.info(
         `[NavigationDebug] ${result.durationSeconds.toFixed(1)} s / `
@@ -96,7 +97,7 @@ export class NavigationDebugCaptureAction extends SingletonAction {
       const location = destinationLabel(result.destination);
       await Promise.allSettled([
         key.setImage(
-          debugKey("GESPEICHERT", `${location} ${seconds}S`, COLORS.green)
+          debugKey(translateUi("saved_upper"), `${location} ${seconds}S`, COLORS.green)
         ),
         (key as unknown as { showOk?: () => Promise<void> }).showOk?.()
       ]);
@@ -107,7 +108,7 @@ export class NavigationDebugCaptureAction extends SingletonAction {
         error
       );
       await Promise.allSettled([
-        key.setImage(debugKey("FEHLER", failureLabel(error), COLORS.red)),
+        key.setImage(debugKey(translateUi("error"), failureLabel(error), COLORS.red)),
         (key as unknown as { showAlert?: () => Promise<void> }).showAlert?.()
       ]);
       this.scheduleReset();
@@ -134,7 +135,7 @@ export class NavigationDebugCaptureAction extends SingletonAction {
   private async renderIdle(): Promise<void> {
     const jobs: Promise<void>[] = [];
     for (const key of this.contexts.values()) {
-      jobs.push(key.setImage(debugKey("60 S PUFFER", "NAV LOG", COLORS.cyan)));
+      jobs.push(key.setImage(debugKey(translateUi("buffer_60s"), "NAV LOG", COLORS.cyan)));
     }
     await Promise.allSettled(jobs);
   }

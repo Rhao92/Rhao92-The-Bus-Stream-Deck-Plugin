@@ -54,7 +54,10 @@ export type MissionStop = {
   DepartureTime?: string;
   BoardingPeopleCount?: number;
   DeboardingPeopleCount?: number;
-  GeoLocation?: [number, number];
+  GeoLocation?: [number, number] | {
+    X?: unknown;
+    Y?: unknown;
+  };
 };
 
 export type MissionTelemetry = {
@@ -77,7 +80,10 @@ export type MissionTelemetry = {
 export type VehicleTelemetry = {
   Speed?: unknown;
   Powermeter?: unknown;
+  CurrentFuel?: unknown;
+  MaxFuel?: unknown;
   DisplayFuel?: unknown;
+  VehicleModel?: unknown;
   AllowedSpeed?: unknown;
   FixingBrake?: unknown;
   IgnitionEnabled?: unknown;
@@ -96,7 +102,7 @@ export type WorldTelemetry = Record<string, unknown>;
 
 export type RouteTelemetry = {
   PathLanes?: unknown[];
-  Paths?: Array<{ PathLanes?: unknown[] }>;
+  Paths?: Array<{ Color?: unknown; PathLanes?: unknown[] }>;
   [key: string]: unknown;
 };
 

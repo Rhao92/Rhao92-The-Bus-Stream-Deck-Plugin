@@ -2,7 +2,6 @@ import streamDeck, {
   action,
   DialAction,
   DialDownEvent,
-  DialRotateEvent,
   SingletonAction,
   TouchTapEvent,
   WillAppearEvent,
@@ -14,8 +13,7 @@ import {
   FULLPANEL_OVERLAY_MS,
   renderFullpanel,
   renderFullpanelSegment,
-  renderFullpanelSetup,
-  signedValue
+  renderFullpanelSetup
 } from "../fullpanel/fullpanel-renderer";
 import {
   FullpanelLayer,
@@ -27,6 +25,7 @@ import {
   RouteGuidanceHub,
   RouteGuidanceModel
 } from "../navigation/route-guidance";
+import { translateUi } from "../core/localization";
 
 type FullpanelSettings = {
   layer?: string;
@@ -42,9 +41,7 @@ type FullpanelGroup = {
   deviceId: string;
   contexts: Map<number, FullpanelContext>;
   layer: FullpanelLayer;
-  stopDemo: boolean;
   blinkBright: boolean;
-  dialValues: [number, number, number, number];
   renderQueued: boolean;
   rendering: boolean;
   lastFull?: string;
@@ -77,9 +74,9 @@ function nextLayer(value: FullpanelLayer): FullpanelLayer {
 }
 
 function layerLabel(value: FullpanelLayer): string {
-  if (value === "vehicle") return "FAHRZEUG";
-  if (value === "navigation") return "NAVIGATION";
-  return "FAHRPLAN";
+  if (value === "vehicle") return translateUi("vehicle");
+  if (value === "navigation") return translateUi("navigation");
+  return translateUi("timetable");
 }
 
 @action({ UUID: "de.rhao92.thebus-telemetry-interface.fullpanel" })
@@ -130,9 +127,9 @@ export class FullpanelAction extends SingletonAction<FullpanelSettings> {
     await Promise.allSettled([
       dial.setFeedbackLayout(FULLPANEL_LAYOUT),
       dial.setTriggerDescription({
-        rotate: "Regler testen",
-        push: "Dashboard wechseln oder STOP testen",
-        touch: "Dashboard wechseln"
+        rotate: translateUi("only_display"),
+        push: column === 0 ? translateUi("change_dashboard") : translateUi("only_display"),
+        touch: translateUi("change_dashboard")
       })
     ]);
 
@@ -192,27 +189,10 @@ export class FullpanelAction extends SingletonAction<FullpanelSettings> {
     group.layer = nextLayer(group.layer);
     this.showOverlay(
       group,
-      "LAYER",
+      translateUi("layer"),
       layerLabel(group.layer)
     );
     await this.persistLayer(group);
-    this.requestRender(group);
-  }
-
-  override onDialRotate(ev: DialRotateEvent<FullpanelSettings>): void {
-    const group = this.groupForContext(ev.action.id);
-    const location = this.locations.get(ev.action.id);
-    if (!group || !location || this.disposed) {
-      return;
-    }
-
-    const ticks = ev.payload?.ticks ?? 0;
-    group.dialValues[location.column] += ticks;
-    this.showOverlay(
-      group,
-      `REGLER ${location.column + 1}${ev.payload?.pressed ? " · GEDRÜCKT" : ""}`,
-      `${signedValue(ticks)}  |  TESTWERT ${group.dialValues[location.column]}`
-    );
     this.requestRender(group);
   }
 
@@ -225,25 +205,17 @@ export class FullpanelAction extends SingletonAction<FullpanelSettings> {
       return;
     }
 
-    if (location.column === 0) {
-      group.layer = nextLayer(group.layer);
-      this.showOverlay(
-        group,
-        "REGLER 1",
-        layerLabel(group.layer)
-      );
-      await this.persistLayer(group);
-    } else if (location.column === 3) {
-      group.stopDemo = !group.stopDemo;
-      this.showOverlay(
-        group,
-        "REGLER 4",
-        group.stopDemo ? "STOP-DEMO AN" : "STOP-DEMO AUS"
-      );
-    } else {
-      this.showOverlay(group, `REGLER ${location.column + 1}`, "DRUCK ERKANNT");
+    if (location.column !== 0) {
+      return;
     }
 
+    group.layer = nextLayer(group.layer);
+    this.showOverlay(
+      group,
+      "REGLER 1",
+      layerLabel(group.layer)
+    );
+    await this.persistLayer(group);
     this.requestRender(group);
   }
 
@@ -278,9 +250,7 @@ export class FullpanelAction extends SingletonAction<FullpanelSettings> {
         deviceId,
         contexts: new Map<number, FullpanelContext>(),
         layer: "timetable",
-        stopDemo: false,
         blinkBright: true,
-        dialValues: [0, 0, 0, 0],
         renderQueued: false,
         rendering: false,
         lastFull: undefined,
@@ -335,7 +305,7 @@ export class FullpanelAction extends SingletonAction<FullpanelSettings> {
         for (const group of this.groups.values()) {
           let needsRender = false;
 
-          if (group.stopDemo || this.viewModel.stopRequest) {
+          if (this.viewModel.stopRequest) {
             group.blinkBright = bright;
             needsRender = true;
           }
@@ -448,7 +418,6 @@ export class FullpanelAction extends SingletonAction<FullpanelSettings> {
       full = renderFullpanel(
         this.viewModel,
         group.layer,
-        group.stopDemo,
         group.blinkBright,
         group.overlay,
         this.guidanceModel

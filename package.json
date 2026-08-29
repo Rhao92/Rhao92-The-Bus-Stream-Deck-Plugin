@@ -1,6 +1,6 @@
 {
   "name": "rhao92-the-bus-telemetry-interface",
-  "version": "2.15.0-beta.18",
+  "version": "2.16.0",
   "description": "Rhao92's free Elgato Stream Deck plugin for The Bus by TML Studios with live telemetry, vehicle controls, navigation, panels and Stream Deck Mobile.",
   "private": true,
   "type": "module",

@@ -19,6 +19,7 @@ export type ManeuverKind =
   | "lane-right"
   | "uturn"
   | "stop"
+  | "pause"
   | "destination"
   | "recalculating"
   | "unavailable";
@@ -35,6 +36,8 @@ export type GuidanceStatus =
   | "live";
 
 export type PredictionConfidence = "none" | "low" | "medium" | "high";
+
+export type NavigationTargetKind = "stop" | "terminal-pause" | "destination";
 
 export type ActiveManeuver = {
   id: string;
@@ -53,8 +56,13 @@ export type RouteGuidanceDebugInfo = {
   at: number;
   stage?: string;
   routeSignature?: string;
+  routeUpdateKind?: "unchanged" | "initial" | "replacement" | "prefix-trim-continuation";
   routeStableForMs?: number;
   laneIds?: number[];
+  routePathCount?: number;
+  routePathLaneCounts?: number[];
+  routeGeometryScope?: "next-segment" | "remaining-line";
+  orderedStopProjectionStartIndex?: number;
   polyline?: {
     points: Array<[number, number]>;
     total: number;
@@ -73,7 +81,9 @@ export type RouteGuidanceDebugInfo = {
   }>;
   targetIndex?: number;
   targetName?: string;
+  targetKind?: NavigationTargetKind;
   targetFinal?: boolean;
+  targetOperationallyReached?: boolean;
   currentAlong?: number;
   rawAlong?: number;
   projectionDistance?: number;
@@ -85,6 +95,8 @@ export type RouteGuidanceDebugInfo = {
   segmentStartAlong?: number;
   segmentEndAlong?: number;
   stopAlong?: number;
+  guidanceStopAlong?: number;
+  projectedNextStopDistance?: number;
   nextStopDistance?: number;
   stopProjectionCandidates?: Array<{
     distance: number;
@@ -151,6 +163,7 @@ export type RouteGuidanceModel = {
   maneuverDistance?: number;
   nextCurveDistance?: number;
   nextRelevantStop: string;
+  nextTargetKind?: NavigationTargetKind;
   nextRelevantStopDistance?: number;
   totalRouteDistance?: number;
   remainingRouteDistance?: number;
@@ -173,6 +186,12 @@ type RouteManeuver = {
   along: number;
   completeAlong: number;
 };
+
+function maneuverSide(kind: ManeuverKind | undefined): "left" | "right" | undefined {
+  if (kind?.includes("left")) return "left";
+  if (kind?.includes("right")) return "right";
+  return undefined;
+}
 type Polyline = {
   points: GeoPoint[];
   cumulative: number[];
@@ -199,11 +218,16 @@ const MAX_CONTINUITY_GAP_METERS = 120;
 // beidseitige Vollspurpruefung und explizite Lane-Change-Metadaten echte
 // Spurwechsel weiterhin schuetzen.
 // The Bus liefert an breiten Strassen auch Dreiergruppen paralleler Lane-IDs.
-// Die beiden aeusseren Alternativen liegen dabei bis rund 6,7 m auseinander.
+// Die beiden aeusseren Alternativen liegen dabei bis rund 6,7 m auseinander;
+// im Alexanderplatz-Mitschnitt vergroessert die unterschiedlich dichte
+// Stuetzpunktverteilung den gemessenen Linienabstand stellenweise noch etwas.
 // Ohne explizite Spurwechsel-Metadaten beschreiben sie denselben Routenast und
-// duerfen nicht als Hin-und-zurueck-Schleife verkettet werden.
-const REDUNDANT_LANE_ENDPOINT_TOLERANCE_METERS = 7;
-const REDUNDANT_LANE_TRACE_TOLERANCE_METERS = 7;
+// duerfen nicht als Hin-und-zurueck-Schleife verkettet werden. Zehn Meter
+// erfassen diese reale Dreiergruppe, waehrend die beidseitige Vollspurpruefung,
+// aehnliche Endpunkte und explizite Lane-Change-Metadaten echte Folgespuren
+// weiterhin schuetzen.
+const REDUNDANT_LANE_ENDPOINT_TOLERANCE_METERS = 10;
+const REDUNDANT_LANE_TRACE_TOLERANCE_METERS = 10;
 const MANEUVER_SEARCH_METERS = 1_500;
 const PROJECTION_JUMP_METERS = 70;
 const PROJECTION_JUMP_TOLERANCE_METERS = 35;
@@ -216,10 +240,24 @@ const MANEUVER_EXIT_CONFIRMATION_MS = 250;
 // Nettoausrichtung verschwinden. Die Begrenzung auf kurze, jeweils deutlich
 // abknickende Gruppen trennt reale Kreuzungs-S-Folgen von langen Strassenboegen
 // wie der Gegenkurve vor U Jakob-Kaiser-Platz.
-const COMPACT_S_MANEUVER_MAX_LENGTH_METERS = 100;
-const COMPACT_S_GROUP_MAX_LENGTH_METERS = 60;
+// Zwei voll ausgepraegte Abbieger koennen sich ueber rund 120 m verteilen,
+// wenn die erste Ausfahrt in eine kurze Verbindungsstrasse und die zweite
+// unmittelbar wieder auf die Folgeachse fuehrt. Die leicht groesseren Grenzen
+// halten solche echten Rechts-links-/Links-rechts-Folgen getrennt, waehrend die
+// deutlich laengeren Strassenboegen weiterhin nicht als kompakte S-Folge
+// gelten.
+const COMPACT_S_MANEUVER_MAX_LENGTH_METERS = 120;
+const COMPACT_S_GROUP_MAX_LENGTH_METERS = 70;
 const COMPACT_S_MIN_TURN_DEGREES = 45;
 const COMPACT_S_BEARING_SPAN_METERS = 10;
+const MANEUVER_MIN_TURN_DEGREES = 24;
+// Ein langer, dicht belegter Bogen kann direkt in kleine Gegenkruemmungen
+// uebergehen, sodass weder fuer das kombinierte S-Paar noch fuer die erste
+// Gruppe ein 8-m-Ausgangsfenster frei bleibt. Nur eine ueber mindestens 30 m
+// und sechs Messpunkte bestaetigte erste Gruppe darf dann ihr lokales
+// 10-m-Peilfenster verwenden. Kurze Lane-Zacken bleiben dadurch neutral.
+const SUSTAINED_CURVE_MIN_LENGTH_METERS = 30;
+const SUSTAINED_CURVE_MIN_SAMPLES = 6;
 const STRAIGHT_GUIDANCE_CONFIRMATION_MS = 500;
 const STRAIGHT_GUIDANCE_MAX_GAP_METERS = 12;
 // Ein Halt kann unmittelbar hinter einer Kurve liegen. Fuer die Klassifikation
@@ -228,6 +266,7 @@ const STRAIGHT_GUIDANCE_MAX_GAP_METERS = 12;
 // ausschliesslich ein Richtungswechsel akzeptiert, dessen Eintritt klar vor
 // dem Halt liegt; ein Folgeabbieger hinter dem Halt kann dadurch nicht gewinnen.
 const MANEUVER_POST_STOP_CONTEXT_METERS = 120;
+const STOP_AFTER_MANEUVER_HANDOFF_METERS = 25;
 // Der kuenstliche Geradeaus-Hinweis schliesst nur die schmale Luecke zwischen
 // einem echten Manoever und der ab 300 m sichtbaren Haltestellenanfahrt. Er ist
 // kein Ersatz fuer eine ueber lange Distanz fehlende Manoevererkennung.
@@ -245,6 +284,21 @@ function asNumber(value: unknown): number | undefined {
   return undefined;
 }
 
+function isPrefixTrimContinuation(
+  previousLaneIds: number[],
+  nextLaneIds: number[]
+): boolean {
+  if (
+    nextLaneIds.length === 0
+    || previousLaneIds.length <= nextLaneIds.length
+  ) return false;
+
+  const removedCount = previousLaneIds.length - nextLaneIds.length;
+  return nextLaneIds.every(
+    (laneId, index) => previousLaneIds[index + removedCount] === laneId
+  );
+}
+
 function isTelemetryTrue(value: unknown): boolean {
   if (value === true || value === 1) return true;
   return typeof value === "string"
@@ -258,9 +312,13 @@ function asObject(value: unknown): Record<string, any> | undefined {
 }
 
 function latLon(value: unknown): GeoPoint | undefined {
-  if (!Array.isArray(value) || value.length < 2) return undefined;
-  const latitude = asNumber(value[0]);
-  const longitude = asNumber(value[1]);
+  const source = asObject(value);
+  const latitude = Array.isArray(value)
+    ? asNumber(value[0])
+    : asNumber(source?.Y);
+  const longitude = Array.isArray(value)
+    ? asNumber(value[1])
+    : asNumber(source?.X);
   if (
     latitude === undefined
     || longitude === undefined
@@ -571,9 +629,21 @@ function choosePlayerProjection(
     ? segmentCandidates
     : projections;
   const minimum = Math.min(...candidates.map((candidate) => candidate.distance));
-  return candidates
+  const selected = candidates
     .filter((candidate) => candidate.distance <= minimum + 8)
     .sort((first, second) => first.along - second.along)[0];
+  const nearest = projections.reduce(
+    (best, candidate) => candidate.distance < best.distance ? candidate : best
+  );
+  // Nach einem Kaltstart kann die Missionsliste bereits umgeschaltet sein,
+  // waehrend der Bus noch auf dem vorherigen Zielabschnitt steht. Eine hunderte
+  // Meter entfernte Segmentprojektion darf dann keine praktisch auf der realen
+  // Route liegende Projektion verdraengen. Die Segmentordnung bleibt fuehrend,
+  // solange sie selbst noch eine raeumlich plausible Position liefert.
+  return selected.distance > MAX_ROUTE_PROJECTION_METERS
+    && nearest.distance <= MAX_ROUTE_PROJECTION_METERS
+    ? nearest
+    : selected;
 }
 
 function chooseTargetProjection(
@@ -850,23 +920,27 @@ export function buildRoutePolyline(
   player: GeoPoint,
   finalStop?: GeoPoint,
   missionStops: MissionStop[] = [],
-  targetIndex?: number
+  targetIndex?: number,
+  coversRemainingLine = false
 ): Polyline | undefined {
   if (laneIds.length === 0 || features.length === 0) return undefined;
-  // /routelaneids liefert in der Praxis oft nur den aktuellen Abschnitt.
-  // Dessen Fahrtrichtung darf weder vom weit entfernten Linienstart noch vom
-  // Linienendhalt bestimmt werden. Als Richtungsanker gelten deshalb der
-  // bestaetigte vorherige Halt und der aktuelle Zielhalt dieses Abschnitts.
-  // Ohne vorherigen Halt bleibt die Fahrzeugposition der Start-Fallback; nur
-  // ohne aktuellen Zielindex bleibt der Linienendhalt der End-Fallback.
+  // Ein einzelner /routelaneids-Path beschreibt in der Praxis meist nur den
+  // aktuellen Abschnitt. Mehrere bestaetigt anschliessende Paths bilden
+  // dagegen den verbleibenden Linienweg bis zum Endhalt. Der Startanker bleibt
+  // jeweils der vorherige bestaetigte Halt; nur die Mehrpfadgeometrie verwendet
+  // den Linienendhalt statt des naechsten Halts als Richtungsanker am Ende.
   const segmentStartStop = targetIndex !== undefined && targetIndex > 0
     ? missionStops[targetIndex - 1]
-    : undefined;
+    : missionStops[0];
   const segmentEndStop = targetIndex !== undefined
     ? missionStops[targetIndex]
     : undefined;
-  const startReference = latLon(segmentStartStop?.GeoLocation) ?? player;
-  const endReference = latLon(segmentEndStop?.GeoLocation) ?? finalStop;
+  const startReference = coversRemainingLine
+    ? player
+    : latLon(segmentStartStop?.GeoLocation) ?? player;
+  const endReference = coversRemainingLine
+    ? finalStop ?? latLon(missionStops.at(-1)?.GeoLocation)
+    : latLon(segmentEndStop?.GeoLocation) ?? finalStop;
   const candidates = [
     routeForOrder(laneIds, features, player, endReference, startReference),
     routeForOrder(
@@ -911,6 +985,79 @@ export function buildRoutePolyline(
       : best,
     undefined
   )?.polyline;
+}
+
+/**
+ * Wenn The Bus mehrere Paths liefert, kann der erste Block nur noch den
+ * kurzen Rest am gerade erreichten Halt enthalten. Scheitert die strenge
+ * Bestätigung der kompletten Restlinie an einem späteren Halt, darf dieser
+ * Mini-Block nicht pauschal der Navigationsfallback werden. Deshalb werden
+ * die Paths in gelieferter Reihenfolge nur so weit zusammengefügt, bis Bus
+ * und aktuelles echtes Missionsziel auf derselben kontinuierlichen Geometrie
+ * bestätigt sind.
+ */
+function buildTargetSegmentFallback(
+  laneGroups: number[][],
+  features: any[],
+  player: GeoPoint,
+  targetLocation: GeoPoint | undefined,
+  missionStops: MissionStop[],
+  targetIndex: number | undefined
+): Polyline | undefined {
+  const segmentStartIndex = targetIndex === undefined
+    ? 0
+    : Math.max(0, targetIndex - 1);
+  const segmentStops = targetIndex === undefined
+    ? []
+    : missionStops.slice(segmentStartIndex, targetIndex + 1);
+  const segmentTargetIndex = segmentStops.length > 0
+    ? segmentStops.length - 1
+    : undefined;
+  const collectedLaneIds: number[] = [];
+  let firstUsable: Polyline | undefined;
+
+  for (const group of laneGroups) {
+    collectedLaneIds.push(...group);
+    const candidate = buildRoutePolyline(
+      collectedLaneIds,
+      features,
+      player,
+      targetLocation,
+      segmentStops,
+      segmentTargetIndex
+    );
+    if (!candidate) continue;
+    firstUsable ??= candidate;
+    if (!targetLocation) return candidate;
+
+    const playerProjection = choosePlayerProjection(
+      projectAll(player, candidate),
+      undefined,
+      undefined,
+      undefined
+    );
+    if (
+      !playerProjection
+      || playerProjection.distance > MAX_ROUTE_PROJECTION_METERS
+    ) continue;
+    const stopCandidates = projectionCandidates(
+      targetLocation,
+      candidate,
+      MAX_STOP_PROJECTION_METERS
+    );
+    const stopProjection = chooseTargetProjection(
+      targetLocation,
+      player,
+      playerProjection,
+      candidate,
+      playerProjection.along,
+      undefined,
+      stopCandidates
+    );
+    if (stopProjection) return candidate;
+  }
+
+  return firstUsable;
 }
 
 function maneuverWindow(
@@ -962,6 +1109,26 @@ function weightedAlong(group: any): number {
     : (group.startAlong + group.endAlong) / 2;
 }
 
+function compactGroupAngle(
+  polyline: Polyline,
+  group: any,
+  routeEnd: number
+): number | undefined {
+  const incoming = bearingBetween(
+    polyline,
+    Math.max(0, group.startAlong - COMPACT_S_BEARING_SPAN_METERS),
+    group.startAlong
+  );
+  const outgoing = bearingBetween(
+    polyline,
+    group.endAlong,
+    Math.min(routeEnd, group.endAlong + COMPACT_S_BEARING_SPAN_METERS)
+  );
+  return incoming === undefined || outgoing === undefined
+    ? undefined
+    : angleDelta(incoming, outgoing);
+}
+
 function compactSShapeFirstTurn(
   polyline: Polyline,
   first: any,
@@ -976,23 +1143,8 @@ function compactSShapeFirstTurn(
     || second.evidence.length < 3
   ) return undefined;
 
-  const groupAngle = (group: any): number | undefined => {
-    const incoming = bearingBetween(
-      polyline,
-      Math.max(0, group.startAlong - COMPACT_S_BEARING_SPAN_METERS),
-      group.startAlong
-    );
-    const outgoing = bearingBetween(
-      polyline,
-      group.endAlong,
-      Math.min(routeEnd, group.endAlong + COMPACT_S_BEARING_SPAN_METERS)
-    );
-    return incoming === undefined || outgoing === undefined
-      ? undefined
-      : angleDelta(incoming, outgoing);
-  };
-  const firstAngle = groupAngle(first);
-  const secondAngle = groupAngle(second);
+  const firstAngle = compactGroupAngle(polyline, first, routeEnd);
+  const secondAngle = compactGroupAngle(polyline, second, routeEnd);
   if (
     firstAngle === undefined
     || secondAngle === undefined
@@ -1004,6 +1156,27 @@ function compactSShapeFirstTurn(
     || Math.abs(secondAngle) >= 155
   ) return undefined;
   return firstAngle;
+}
+
+function sustainedCurveAngle(
+  polyline: Polyline,
+  group: any,
+  routeEnd: number
+): number | undefined {
+  const length = group.endAlong - group.startAlong;
+  if (
+    length < SUSTAINED_CURVE_MIN_LENGTH_METERS
+    || length > COMPACT_S_GROUP_MAX_LENGTH_METERS
+    || group.evidence.length < SUSTAINED_CURVE_MIN_SAMPLES
+  ) return undefined;
+  const angle = compactGroupAngle(polyline, group, routeEnd);
+  if (
+    angle === undefined
+    || Math.sign(angle) !== group.sign
+    || Math.abs(angle) < MANEUVER_MIN_TURN_DEGREES
+    || Math.abs(angle) >= 155
+  ) return undefined;
+  return angle;
 }
 
 function continuousUturn(polyline: Polyline, window: any): boolean {
@@ -1132,33 +1305,75 @@ function findNextManeuver(
         )
       };
     }
-    const last = isSShape ? second : first;
-    const window = maneuverWindow(
+    let combinedSShape = isSShape;
+    let last = isSShape ? second : first;
+    let window = maneuverWindow(
       polyline,
       first.startAlong,
       last.endAlong,
       routeEnd,
       groups[index + (isSShape ? 2 : 1)]?.startAlong
     );
+    // Eine nahe Gegenkurve ist nur dann ein gemeinsames S-Manoever, wenn fuer
+    // das Paar auch eine belastbare Ausgangspeilung existiert. Im realen
+    // Abschnitt vor dem Brandenburger Tor lag direkt hinter der Gegenkurve
+    // bereits die naechste Geometriegruppe; deren Sicherheitsabstand liess das
+    // gemeinsame Ausgangsfenster auf 0 m schrumpfen. Der deutlich ausgepraegte
+    // erste Linksbogen darf dadurch nicht zusammen mit dem ganzen Paar
+    // verschwinden. In diesem Sonderfall wird zuerst die erste Gruppe allein
+    // bis zum Beginn der Gegenkurve bewertet; die zweite bleibt bei einer
+    // Ablehnung fuer den folgenden Schleifendurchlauf erhalten.
+    if (!window && isSShape) {
+      combinedSShape = false;
+      last = first;
+      window = maneuverWindow(
+        polyline,
+        first.startAlong,
+        first.endAlong,
+        routeEnd,
+        second.startAlong
+      );
+    }
+    const sustainedFirstAngle = !window && isSShape
+      ? sustainedCurveAngle(polyline, first, routeEnd)
+      : undefined;
+    if (sustainedFirstAngle !== undefined) {
+      const kind = classifyTurn(sustainedFirstAngle);
+      if (groupDebug) {
+        groupDebug.windowAngle = sustainedFirstAngle;
+        groupDebug.classifiedKind = kind;
+        groupDebug.selected = true;
+      }
+      const weighted = weightedAlong(first);
+      const entryAlong = Math.min(weighted, first.startAlong + 12);
+      return {
+        kind,
+        along: entryAlong,
+        completeAlong: Math.max(
+          entryAlong,
+          Math.min(routeEnd, first.endAlong + 12)
+        )
+      };
+    }
     if (!window) {
       if (groupDebug) groupDebug.rejection = "bearing-window-unavailable";
-      if (isSShape) index += 1;
+      if (combinedSShape) index += 1;
       continue;
     }
     if (groupDebug) groupDebug.windowAngle = window.angle;
-    if (Math.abs(window.angle) < 24) {
+    if (Math.abs(window.angle) < MANEUVER_MIN_TURN_DEGREES) {
       if (groupDebug) groupDebug.rejection = "combined-angle-below-24-deg";
-      if (isSShape) index += 1;
+      if (combinedSShape) index += 1;
       continue;
     }
     const kind = classifyTurn(window.angle);
     if (groupDebug) groupDebug.classifiedKind = kind;
     if (kind === "uturn" && !continuousUturn(polyline, window)) {
       if (groupDebug) groupDebug.rejection = "uturn-not-continuous";
-      if (isSShape) index += 1;
+      if (combinedSShape) index += 1;
       continue;
     }
-    const combined = isSShape
+    const combined = combinedSShape
       ? {
         evidence: [...first.evidence, ...second.evidence],
         startAlong: first.startAlong,
@@ -1170,7 +1385,7 @@ function findNextManeuver(
     // dem Teilbogen mit demselben Vorzeichen. Sonst kann eine lange linke
     // Zufahrtskurve den Anker eines folgenden Rechtsbogens hunderte Meter nach
     // hinten ziehen und den verriegelten Pfeil dort bei 0 m festhalten.
-    const maneuverGroup = isSShape && kind !== "uturn"
+    const maneuverGroup = combinedSShape && kind !== "uturn"
       ? (first.sign === Math.sign(window.angle) ? first : second)
       : combined;
     const weighted = weightedAlong(maneuverGroup);
@@ -1179,7 +1394,7 @@ function findNextManeuver(
     // erkennt die Kurve etwas vor ihrem tatsächlichen Beginn; die halbe
     // Messbreite verschiebt den Anker wieder an den belastbaren Kurveneintritt.
     const entryAlong = Math.min(weighted, maneuverGroup.startAlong + 12);
-    const selectedDebug = isSShape && maneuverGroup === second
+    const selectedDebug = combinedSShape && maneuverGroup === second
       ? debug?.groups[index + 1]
       : groupDebug;
     if (selectedDebug) selectedDebug.selected = true;
@@ -1227,6 +1442,52 @@ function stopName(stop: MissionStop | undefined): string {
     : String(value).trim();
 }
 
+/**
+ * The Bus 1.2.100790 reports NextStop/LastStopReached correctly, while the
+ * accompanying numeric indices can use a different base. Resolve the real
+ * mission object against Stops first; indices remain a compatibility fallback.
+ */
+function missionStopIndex(
+  stops: MissionStop[],
+  candidate: MissionStop | undefined
+): number | undefined {
+  if (!candidate || stops.length === 0) return undefined;
+  const referenceIndex = stops.indexOf(candidate);
+  if (referenceIndex >= 0) return referenceIndex;
+
+  const candidateName = stopName(candidate);
+  const candidateLocation = latLon(candidate.GeoLocation);
+  const candidateArrival = candidate.ArrivalTime ?? "";
+  const candidateDeparture = candidate.DepartureTime ?? "";
+  const matches = stops
+    .map((stop, index) => ({
+      index,
+      stop,
+      location: latLon(stop.GeoLocation)
+    }))
+    .filter(({ stop }) => (
+      candidateName === "--" || stopName(stop) === candidateName
+    ));
+
+  if (candidateLocation) {
+    const nearest = matches
+      .filter((match) => match.location)
+      .map((match) => ({
+        ...match,
+        distance: metersBetween(candidateLocation, match.location!)
+      }))
+      .sort((left, right) => left.distance - right.distance)[0];
+    if (nearest && nearest.distance <= 30) return nearest.index;
+  }
+
+  const scheduled = matches.find(({ stop }) => (
+    (candidateArrival === "" || stop.ArrivalTime === candidateArrival)
+    && (candidateDeparture === "" || stop.DepartureTime === candidateDeparture)
+  ));
+  if (scheduled) return scheduled.index;
+  return matches.length === 1 ? matches[0].index : undefined;
+}
+
 function missionLineIdentity(mission: MissionTelemetry | undefined): string {
   const stops = Array.isArray(mission?.Stops) ? mission.Stops : [];
   return stops.length === 0
@@ -1242,6 +1503,34 @@ function missionLineIdentity(mission: MissionTelemetry | undefined): string {
     ]);
 }
 
+function missionStopTime(stop: MissionStop | undefined, departure: boolean): string | undefined {
+  const source = asObject(stop);
+  const value = departure
+    ? source?.PlannedDepartureTime ?? stop?.DepartureTime
+    : source?.PlannedArrivalTime ?? stop?.ArrivalTime;
+  if (value == null || String(value).trim() === "") return undefined;
+  return String(value).trim();
+}
+
+/**
+ * The Bus exposes the operational start of a line as two consecutive mission
+ * points with the exact same scheduled arrival and departure. Real captures
+ * confirm this structure at Hertzallee, Flughafen Tegel, U Leopoldplatz and
+ * Alexanderplatz. The names may differ, therefore the schedule structure –
+ * not a place-name list – is the authoritative mission characteristic.
+ */
+function isMissionStartTerminalPair(stops: MissionStop[], index: number | undefined): boolean {
+  if (index === undefined || index < 0 || index > 1 || stops.length < 3) return false;
+  const firstArrival = missionStopTime(stops[0], false);
+  const firstDeparture = missionStopTime(stops[0], true);
+  const secondArrival = missionStopTime(stops[1], false);
+  const secondDeparture = missionStopTime(stops[1], true);
+  return firstArrival !== undefined
+    && firstDeparture !== undefined
+    && firstArrival === secondArrival
+    && firstDeparture === secondDeparture;
+}
+
 function resolveTarget(mission: MissionTelemetry | undefined): any {
   if (!mission) return {
     name: "--",
@@ -1250,13 +1539,22 @@ function resolveTarget(mission: MissionTelemetry | undefined): any {
     segmentIdentity: "no-mission"
   };
   const stops = Array.isArray(mission.Stops) ? mission.Stops : [];
-  const lastReached = asNumber(mission.LastStopReachedIndex);
-  const nextIndex = asNumber(mission.NextStopIndex);
-  const confirmedNext = lastReached !== undefined
-    ? Math.trunc(lastReached) + 1
-    : nextIndex !== undefined
-      ? Math.trunc(nextIndex)
-      : undefined;
+  const reportedLastReached = asNumber(mission.LastStopReachedIndex);
+  const reportedNextIndex = asNumber(mission.NextStopIndex);
+  const objectLastReached = missionStopIndex(stops, mission.LastStopReached);
+  const objectNextIndex = missionStopIndex(stops, mission.NextStop);
+  const effectiveLastReached = objectLastReached
+    ?? (reportedLastReached === undefined
+      ? undefined
+      : Math.trunc(reportedLastReached));
+  const confirmedNext = objectNextIndex
+    ?? (objectLastReached !== undefined
+      ? objectLastReached + 1
+      : reportedLastReached !== undefined
+        ? Math.trunc(reportedLastReached) + 1
+        : reportedNextIndex !== undefined
+          ? Math.trunc(reportedNextIndex)
+          : undefined);
   const boundedIndex = confirmedNext === undefined
     ? undefined
     : Math.max(0, Math.min(stops.length - 1, confirmedNext));
@@ -1267,42 +1565,121 @@ function resolveTarget(mission: MissionTelemetry | undefined): any {
     ?? stop?.ArrivalTime
     ?? asObject(stop)?.EstimatedArrivalTime;
   const finalStop = stops.at(-1);
+  const final = boundedIndex !== undefined
+    && stops.length > 0
+    && boundedIndex >= stops.length - 1;
+  const kind: NavigationTargetKind = final
+    ? "destination"
+    : isMissionStartTerminalPair(stops, boundedIndex)
+      ? "terminal-pause"
+      : "stop";
+  const terminalPairReached = kind === "terminal-pause"
+    && boundedIndex === 1
+    && effectiveLastReached !== undefined
+    && effectiveLastReached >= 0;
   return {
     stop,
     name,
     location: latLon(stop?.GeoLocation),
     plannedArrival,
     index: boundedIndex,
-    final: boundedIndex !== undefined
-      && stops.length > 0
-      && boundedIndex >= stops.length - 1,
+    kind,
+    terminalPairReached,
+    final,
     finalLocation: latLon(finalStop?.GeoLocation),
     firstLocation: latLon(stops[0]?.GeoLocation),
     identity: JSON.stringify([boundedIndex ?? -1, name, plannedArrival ?? ""]),
     segmentIdentity: JSON.stringify([
       mission.MissionClassName ?? "",
-      Math.trunc(lastReached ?? -1),
+      effectiveLastReached ?? -1,
       boundedIndex ?? -1
     ])
   };
 }
 
-function extractLaneIds(route: any): number[] {
-  const source = asObject(route);
-  const candidates: unknown[][] = [];
-  if (Array.isArray(source?.PathLanes)) candidates.push(source.PathLanes);
-  if (Array.isArray(source?.Paths)) {
-    for (const path of source.Paths) {
-      if (Array.isArray(path?.PathLanes) && path.PathLanes.length > 0) {
-        candidates.push(path.PathLanes);
-        break;
-      }
-    }
+function sameMissionTarget(first: any, second: any): boolean {
+  if (!first || !second || first.name !== second.name) return false;
+  if (first.location && second.location) {
+    return metersBetween(first.location, second.location) <= 30;
   }
-  return (candidates[0] ?? [])
+  return first.plannedArrival === second.plannedArrival;
+}
+
+/**
+ * The Bus kann die Stops-Liste waehrend einer laufenden Fahrt am Anfang
+ * kuerzen. Ein bereits bestaetigtes Ziel muss deshalb gegen die aktuelle
+ * Liste neu indiziert werden, ohne allein durch den Indexversatz auf den
+ * uebernaechsten Halt zu springen.
+ */
+function remapMissionTarget(
+  mission: MissionTelemetry | undefined,
+  target: any
+): any {
+  const stops = Array.isArray(mission?.Stops) ? mission.Stops : [];
+  const index = missionStopIndex(stops, target?.stop);
+  if (!mission || index === undefined) return target;
+  const stop = stops[index] ?? target.stop;
+  const name = stopName(stop);
+  const plannedArrival = asObject(stop)?.PlannedArrivalTime
+    ?? stop?.ArrivalTime
+    ?? asObject(stop)?.EstimatedArrivalTime;
+  const final = index >= stops.length - 1;
+  const kind: NavigationTargetKind = final
+    ? "destination"
+    : isMissionStartTerminalPair(stops, index)
+      ? "terminal-pause"
+      : "stop";
+  const objectLastReached = missionStopIndex(stops, mission.LastStopReached);
+  const reportedLastReached = asNumber(mission.LastStopReachedIndex);
+  const effectiveLastReached = objectLastReached
+    ?? (reportedLastReached === undefined
+      ? undefined
+      : Math.trunc(reportedLastReached));
+  const terminalPairReached = kind === "terminal-pause"
+    && index === 1
+    && effectiveLastReached !== undefined
+    && effectiveLastReached >= 0;
+  return {
+    ...target,
+    stop,
+    name,
+    location: latLon(stop?.GeoLocation),
+    plannedArrival,
+    index,
+    kind,
+    terminalPairReached,
+    final,
+    finalLocation: latLon(stops.at(-1)?.GeoLocation),
+    firstLocation: latLon(stops[0]?.GeoLocation),
+    identity: JSON.stringify([index, name, plannedArrival ?? ""]),
+    segmentIdentity: JSON.stringify([
+      mission.MissionClassName ?? "",
+      index,
+      name,
+      plannedArrival ?? ""
+    ])
+  };
+}
+
+function normalizedLaneIds(values: unknown): number[] {
+  return (Array.isArray(values) ? values : [])
     .map(asNumber)
     .filter((value) => value !== undefined && value >= 0)
     .map((value) => Math.trunc(value));
+}
+
+function extractLaneGroups(route: any): number[][] {
+  const source = asObject(route);
+  const direct = normalizedLaneIds(source?.PathLanes);
+  if (direct.length > 0) return [direct];
+  const groups: number[][] = [];
+  if (Array.isArray(source?.Paths)) {
+    for (const path of source.Paths) {
+      const laneIds = normalizedLaneIds(path?.PathLanes);
+      if (laneIds.length > 0) groups.push(laneIds);
+    }
+  }
+  return groups;
 }
 
 function parseTime(value: unknown): { seconds: number; hasDate: boolean } | undefined {
@@ -1319,6 +1696,20 @@ function parseTime(value: unknown): { seconds: number; hasDate: boolean } | unde
         Number(date[4]),
         Number(date[5]),
         Number(date[6] ?? 0)
+      ) / 1000;
+      if (Number.isFinite(seconds)) return { seconds, hasDate: true };
+    }
+    const theBusDate = text.match(
+      /^(\d{4})\.(\d{2})\.(\d{2})-(\d{1,2})\.(\d{2})(?:\.(\d{2}))?/
+    );
+    if (theBusDate) {
+      const seconds = Date.UTC(
+        Number(theBusDate[1]),
+        Number(theBusDate[2]) - 1,
+        Number(theBusDate[3]),
+        Number(theBusDate[4]),
+        Number(theBusDate[5]),
+        Number(theBusDate[6] ?? 0)
       ) / 1000;
       if (Number.isFinite(seconds)) return { seconds, hasDate: true };
     }
@@ -1403,9 +1794,13 @@ function unavailableModel(
 
 export class RouteGuidanceEngine {
   private routeSignature = "";
+  private routeLaneIds: number[] = [];
   private routeStableSince = 0;
   private polyline: Polyline | undefined;
   private orderedStopProjectionCache: Projection[] = [];
+  private orderedStopProjectionStartIndex = 0;
+  private routeGeometryScope: "next-segment" | "remaining-line" = "next-segment";
+  private routePathLaneCounts: number[] = [];
   private previousAlong: number | undefined;
   private lineIdentity = "";
   private confirmedLineProgress: number | undefined;
@@ -1419,6 +1814,9 @@ export class RouteGuidanceEngine {
   private confirmedSegmentDistances = new Map<number, number>();
   private observedSegmentLowerBounds = new Map<number, number>();
   private segmentIdentity = "";
+  private retainedTarget: any | undefined;
+  private retainedTargetApproached = false;
+  private targetMissionClass = "";
   private speedSamples: Array<{ at: number; speed: number }> = [];
   private lastSpeedTimestamp: number | undefined;
   private lastMovingAt: number | undefined;
@@ -1427,9 +1825,13 @@ export class RouteGuidanceEngine {
 
   reset(): void {
     this.routeSignature = "";
+    this.routeLaneIds = [];
     this.routeStableSince = 0;
     this.polyline = undefined;
     this.orderedStopProjectionCache = [];
+    this.orderedStopProjectionStartIndex = 0;
+    this.routeGeometryScope = "next-segment";
+    this.routePathLaneCounts = [];
     this.previousAlong = undefined;
     this.lineIdentity = "";
     this.confirmedLineProgress = undefined;
@@ -1438,7 +1840,145 @@ export class RouteGuidanceEngine {
     this.pendingManeuverExit = undefined;
     this.confirmedSegmentDistances.clear();
     this.observedSegmentLowerBounds.clear();
+    this.retainedTarget = undefined;
+    this.retainedTargetApproached = false;
+    this.targetMissionClass = "";
     this.resetSegment();
+  }
+
+  /**
+   * Missionsobjekte duerfen erst auf den Folgehalt umschalten, nachdem das
+   * bisherige echte Ziel raeumlich erreicht wurde. Im 26.08.-Live-Trace
+   * sprangen CurrentStop/NextStop/LastStopReached am Alexanderplatz bereits
+   * auf Prenzlauer Allee/Otto-Braun-Str., obwohl der Bus noch 776 m vor dem
+   * bisherigen Ziel stand. Die numerischen Indizes blieben dabei unveraendert.
+   */
+  private stabilizeTarget(
+    candidate: any,
+    mission: MissionTelemetry | undefined,
+    player: GeoPoint
+  ): any {
+    const missionClass = String(mission?.MissionClassName ?? "");
+    if (
+      this.targetMissionClass !== ""
+      && missionClass !== this.targetMissionClass
+    ) {
+      this.retainedTarget = undefined;
+      this.retainedTargetApproached = false;
+    }
+    this.targetMissionClass = missionClass;
+
+    // Kaltstart mitten in derselben problematischen Umschaltphase: Steht der
+    // Bus nachweislich an einem Missionshalt und das gemeldete Objekt liegt
+    // mehr als einen Eintrag davor, ist der unmittelbar folgende echte
+    // Missionspunkt das naechste Ziel. So funktioniert die Korrektur auch nach
+    // einem Plugin-Neustart ohne vorher im Speicher gehaltenes Ziel.
+    const stops = Array.isArray(mission?.Stops) ? mission.Stops : [];
+    const candidateIndex = asNumber(candidate?.index);
+    if (candidateIndex !== undefined && stops.length > 0) {
+      const nearestStop = stops
+        .map((stop, index) => ({
+          stop,
+          index,
+          location: latLon(stop.GeoLocation)
+        }))
+        .filter((item) => item.location)
+        .map((item) => ({
+          ...item,
+          distance: metersBetween(player, item.location!)
+        }))
+        .sort((first, second) => first.distance - second.distance)[0];
+      if (
+        nearestStop
+        && nearestStop.distance <= STOP_REACHED_RADIUS_METERS
+        && nearestStop.index + 1 < candidateIndex
+      ) {
+        candidate = remapMissionTarget(mission, {
+          stop: stops[nearestStop.index + 1]
+        });
+      }
+    }
+
+    if (!this.retainedTarget) {
+      this.retainedTarget = candidate;
+      this.retainedTargetApproached = Boolean(
+        candidate?.location
+        && metersBetween(player, candidate.location) <= STOP_REACHED_RADIUS_METERS
+      );
+      return candidate;
+    }
+
+    let retained = remapMissionTarget(mission, this.retainedTarget);
+    let retainedIndex = asNumber(retained?.index);
+    const currentCandidateIndex = asNumber(candidate?.index);
+    const objectLastReachedIndex = missionStopIndex(
+      stops,
+      mission?.LastStopReached
+    );
+    const reportedLastReachedIndex = asNumber(mission?.LastStopReachedIndex);
+    const effectiveLastReachedIndex = objectLastReachedIndex
+      ?? (reportedLastReachedIndex === undefined
+        ? undefined
+        : Math.trunc(reportedLastReachedIndex));
+    if (
+      retained?.kind === "terminal-pause"
+      && retainedIndex === 0
+      && currentCandidateIndex !== undefined
+      && currentCandidateIndex >= 2
+      && effectiveLastReachedIndex !== undefined
+      && effectiveLastReachedIndex >= 1
+      && isMissionStartTerminalPair(stops, 1)
+    ) {
+      // The Bus kann bereits den ersten Linienhalt als NextStop melden, waehrend
+      // der Navigator noch den ersten internen Punkt des Start-/Terminalpaares
+      // haelt. Ein exakt bestaetigter zweiter Missionspunkt fuehrt die Pause
+      // deshalb auf diesen realen Standort weiter. Ohne diese Umschaltung blieb
+      // das Symbol im Ostbahnhof-Trace auch nach der Ausfahrt am ersten Punkt
+      // verriegelt.
+      retained = remapMissionTarget(mission, { stop: stops[1] });
+      retainedIndex = asNumber(retained?.index);
+      this.retainedTarget = retained;
+    }
+    const retainedDistance = retained?.location
+      ? metersBetween(player, retained.location)
+      : undefined;
+    if (
+      retainedDistance !== undefined
+      && retainedDistance <= STOP_REACHED_RADIUS_METERS
+    ) {
+      this.retainedTargetApproached = true;
+    }
+
+    if (sameMissionTarget(candidate, retained)) {
+      this.retainedTarget = candidate;
+      return candidate;
+    }
+
+    if (
+      retained?.kind === "terminal-pause"
+      && retainedIndex !== 0
+      && this.retainedTargetApproached
+      && retainedDistance !== undefined
+      && retainedDistance <= STOP_REACHED_RADIUS_METERS
+    ) {
+      // Am zweiten Punkt bleibt die bestaetigte Pause sichtbar. Erst nach dem
+      // echten Verlassen des 45-m-Zielbereichs darf das bereits vorauseilende
+      // Missionsobjekt auf den ersten Linienhalt umschalten.
+      this.retainedTarget = retained;
+      return retained;
+    }
+
+    if (this.retainedTargetApproached) {
+      this.retainedTarget = candidate;
+      this.retainedTargetApproached = Boolean(
+        candidate?.location
+        && metersBetween(player, candidate.location) <= STOP_REACHED_RADIUS_METERS
+      );
+      return candidate;
+    }
+
+    this.retainedTarget = retained;
+    return retained;
   }
 
   private debugState(
@@ -1458,6 +1998,10 @@ export class RouteGuidanceEngine {
       routeStableForMs: this.routeStableSince > 0
         ? Math.max(0, now - this.routeStableSince)
         : undefined,
+      routePathCount: this.routePathLaneCounts.length,
+      routePathLaneCounts: this.routePathLaneCounts,
+      routeGeometryScope: this.routeGeometryScope,
+      orderedStopProjectionStartIndex: this.orderedStopProjectionStartIndex,
       polyline: polyline
         ? {
           points: polyline.points,
@@ -1524,7 +2068,8 @@ export class RouteGuidanceEngine {
       );
     }
 
-    const laneIds = extractLaneIds(snapshot.route);
+    const laneGroups = extractLaneGroups(snapshot.route);
+    const laneIds = laneGroups.flat();
     if (laneIds.length === 0) {
       this.resetRouteState();
       return unavailableModel(
@@ -1561,7 +2106,11 @@ export class RouteGuidanceEngine {
       this.debugState(now, "projection", "player-position-invalid", laneIds)
     );
 
-    const target = resolveTarget(snapshot.mission);
+    const target = this.stabilizeTarget(
+      resolveTarget(snapshot.mission),
+      snapshot.mission,
+      player
+    );
     const missionStops = Array.isArray(snapshot.mission?.Stops)
       ? snapshot.mission.Stops
       : [];
@@ -1569,15 +2118,18 @@ export class RouteGuidanceEngine {
       ? undefined
       : Math.max(0, Math.min(missionStops.length - 1, target.index));
     const currentLineIdentity = missionLineIdentity(snapshot.mission);
-    if (currentLineIdentity !== this.lineIdentity) {
+    const lineIdentityChanged = currentLineIdentity !== this.lineIdentity;
+    if (lineIdentityChanged) {
       this.lineIdentity = currentLineIdentity;
       this.confirmedLineProgress = undefined;
       this.previousAlong = undefined;
       this.orderedStopProjectionCache = [];
+      this.orderedStopProjectionStartIndex = 0;
       this.confirmedSegmentDistances.clear();
       this.observedSegmentLowerBounds.clear();
     }
-    if (target.segmentIdentity !== this.segmentIdentity) {
+    const segmentIdentityChanged = target.segmentIdentity !== this.segmentIdentity;
+    if (segmentIdentityChanged) {
       this.segmentIdentity = target.segmentIdentity;
       // Die ETA-Glättung gehört zum Zielabschnitt und wird verworfen. Die
       // rollende, höchstens 90 s alte Fahrhistorie bleibt dagegen als
@@ -1588,21 +2140,110 @@ export class RouteGuidanceEngine {
     }
     this.recordSpeed(snapshot, now);
 
+    // Die Path-Grenze ist Darstellungs-/Segmentmetadatum von The Bus und kann
+    // sich verschieben, obwohl die geordnete Lane-Folge identisch bleibt. Nur
+    // die tatsaechliche Geometriefolge darf deshalb eine neue Route ausloesen.
+    // Andernfalls wuerde ein reines Umgruppieren die 500-ms-Bestaetigung und
+    // den aktiven Pfeil unnoetig zuruecksetzen.
     const signature = `${laneIds.join(",")}|${currentLineIdentity}`;
-    if (signature !== this.routeSignature || !this.polyline) {
+    this.routePathLaneCounts = laneGroups.map((group) => group.length);
+    const previousAlongBeforeRouteUpdate = this.previousAlong;
+    const routeChanged = signature !== this.routeSignature || !this.polyline;
+    const prefixTrimContinuation = routeChanged
+      && Boolean(this.polyline)
+      && !lineIdentityChanged
+      && !segmentIdentityChanged
+      && isPrefixTrimContinuation(this.routeLaneIds, laneIds);
+    const routeUpdateKind: NonNullable<
+      RouteGuidanceDebugInfo["routeUpdateKind"]
+    > = !routeChanged
+      ? "unchanged"
+      : !this.polyline
+        ? "initial"
+        : prefixTrimContinuation
+          ? "prefix-trim-continuation"
+          : "replacement";
+    if (routeChanged) {
       this.routeSignature = signature;
-      this.routeStableSince = now;
-      this.polyline = buildRoutePolyline(
-        laneIds,
-        features,
-        player,
-        target.finalLocation,
-        missionStops,
-        targetIndex
+      this.routeLaneIds = [...laneIds];
+      // The Bus entfernt während der Fahrt regelmäßig bereits abgefahrene
+      // Lane-IDs am Anfang der Route. Ist die neue Liste ein exakter Suffix
+      // derselben Linie und desselben Zielabschnitts, bleibt die bestätigte
+      // Routengeometrie fachlich dieselbe. Ein erneuter 500-ms-Reset würde
+      // sonst den Geradeauspfeil bei jeder Lane-Grenze kurz ausblenden.
+      if (!prefixTrimContinuation) {
+        this.routeStableSince = now;
+      }
+      const remainingStartCandidates = targetIndex === undefined
+        ? [0]
+        : Array.from(new Set([
+          Math.max(0, targetIndex - 1),
+          targetIndex
+        ]));
+      let remainingStopStartIndex = 0;
+      let remainingPolyline: Polyline | undefined;
+      let remainingStopProjections: Projection[] | undefined;
+      if (laneGroups.length > 1) {
+        for (const startIndex of remainingStartCandidates) {
+          const remainingStops = missionStops.slice(startIndex);
+          if (remainingStops.length < 2) continue;
+          const remainingTargetIndex = targetIndex === undefined
+            ? undefined
+            : targetIndex - startIndex;
+          const candidatePolyline = buildRoutePolyline(
+            laneIds,
+            features,
+            player,
+            target.finalLocation,
+            remainingStops,
+            remainingTargetIndex,
+            true
+          );
+          const candidateProjections = candidatePolyline
+            ? orderedMissionStopProjections(remainingStops, candidatePolyline)
+            : undefined;
+          if (
+            candidatePolyline
+            && candidateProjections?.length === remainingStops.length
+          ) {
+            remainingStopStartIndex = startIndex;
+            remainingPolyline = candidatePolyline;
+            remainingStopProjections = candidateProjections;
+            break;
+          }
+        }
+      }
+      const remainingLineConfirmed = Boolean(
+        remainingPolyline && remainingStopProjections
       );
-      this.orderedStopProjectionCache = this.polyline
-        ? orderedMissionStopProjections(missionStops, this.polyline) ?? []
-        : [];
+
+      if (remainingLineConfirmed) {
+        this.polyline = remainingPolyline;
+        this.orderedStopProjectionCache = remainingStopProjections!;
+        this.orderedStopProjectionStartIndex = remainingStopStartIndex;
+        this.routeGeometryScope = "remaining-line";
+      } else {
+        this.polyline = buildTargetSegmentFallback(
+          laneGroups,
+          features,
+          player,
+          target.location,
+          missionStops,
+          targetIndex
+        ) ?? buildRoutePolyline(
+          laneGroups[0] ?? [],
+          features,
+          player,
+          target.finalLocation,
+          missionStops,
+          targetIndex
+        );
+        this.orderedStopProjectionCache = this.polyline
+          ? orderedMissionStopProjections(missionStops, this.polyline) ?? []
+          : [];
+        this.orderedStopProjectionStartIndex = 0;
+        this.routeGeometryScope = "next-segment";
+      }
       this.previousAlong = undefined;
       this.latchedManeuver = undefined;
       this.pendingProjectionJump = undefined;
@@ -1613,18 +2254,24 @@ export class RouteGuidanceEngine {
       snapshot,
       "no-route",
       laneIds.length,
-      this.debugState(now, "polyline", "route-polyline-build-failed", laneIds, {
-        targetIndex,
-        targetName: target.name,
-        targetFinal: target.final
+        this.debugState(now, "polyline", "route-polyline-build-failed", laneIds, {
+          targetIndex,
+          targetName: target.name,
+          targetKind: target.kind,
+          targetFinal: target.final
       })
     );
 
+    const projectionForStop = (stopIndex: number | undefined) => stopIndex === undefined
+      ? undefined
+      : this.orderedStopProjectionCache[
+        stopIndex - this.orderedStopProjectionStartIndex
+      ];
     const segmentStartAlong = targetIndex !== undefined && targetIndex > 0
-      ? this.orderedStopProjectionCache[targetIndex - 1]?.along
+      ? projectionForStop(targetIndex - 1)?.along
       : undefined;
     const segmentEndAlong = targetIndex !== undefined
-      ? this.orderedStopProjectionCache[targetIndex]?.along
+      ? projectionForStop(targetIndex)?.along
       : undefined;
     const playerProjections = projectAll(player, polyline);
     const projection = choosePlayerProjection(
@@ -1644,6 +2291,7 @@ export class RouteGuidanceEngine {
             : "player-projection-missing", laneIds, {
             targetIndex,
             targetName: target.name,
+            targetKind: target.kind,
             targetFinal: target.final,
             rawAlong: projection?.along,
             projectionDistance: projection?.distance,
@@ -1663,12 +2311,31 @@ export class RouteGuidanceEngine {
     const reversing = String(snapshot.vehicle.Gearbox?.CurrentSelector ?? "")
       .trim().toUpperCase() === "R";
     const rawAlong = projection.along;
+    if (
+      prefixTrimContinuation
+      && previousAlongBeforeRouteUpdate !== undefined
+      && this.latchedManeuver
+    ) {
+      // Die neue Suffix-Polyline beginnt weiter hinten als ihre Vorgaengerin.
+      // Ohne dieselbe Verschiebung am verriegelten Manoever bleibt dessen alter
+      // Along-Wert kuenstlich vor dem Bus und kann minutenlang die inzwischen
+      // gegensaetzliche echte Geometrie ueberschreiben.
+      const trimmedAlong = Math.max(0, previousAlongBeforeRouteUpdate - rawAlong);
+      if (trimmedAlong > 0.5) {
+        this.latchedManeuver = {
+          ...this.latchedManeuver,
+          along: this.latchedManeuver.along - trimmedAlong,
+          completeAlong: this.latchedManeuver.completeAlong - trimmedAlong
+        };
+        this.pendingManeuverExit = undefined;
+      }
+    }
     const currentAlong = this.stabilizeProjection(rawAlong, reversing, now);
     if (!reversing) this.previousAlong = currentAlong;
 
     const preferredStopProjection = targetIndex === undefined
       ? undefined
-      : this.orderedStopProjectionCache[targetIndex];
+      : projectionForStop(targetIndex);
     const stopProjectionCandidates = target.location
       ? projectionCandidates(
         target.location,
@@ -1690,20 +2357,35 @@ export class RouteGuidanceEngine {
     const stopAlong = stopProjection
       ? Math.max(currentAlong, stopProjection.along)
       : undefined;
-    const nextStopDistance = stopAlong === undefined
+    const projectedNextStopDistance = stopAlong === undefined
       ? undefined
       : Math.max(0, stopAlong - currentAlong);
+    // The Bus advances from the first to the second point of an operational
+    // start-terminal pair even though both points describe the same scheduled
+    // pause. Once the first point is confirmed as reached by the mission, the
+    // visible target is therefore already reached. The projected distance to
+    // the second internal point remains in diagnostics and route geometry, but
+    // must not be presented as a real 181/187-m drive to the passenger.
+    const targetOperationallyReached = Boolean(target.terminalPairReached);
+    const guidanceStopAlong = targetOperationallyReached
+      ? currentAlong
+      : stopAlong;
+    const nextStopDistance = targetOperationallyReached
+      ? 0
+      : projectedNextStopDistance;
 
     const missionStopProjections = this.orderedStopProjectionCache;
     const hasCompleteLineGeometry = Boolean(
-      missionStopProjections.length === missionStops.length
+      this.orderedStopProjectionStartIndex === 0
+      && missionStopProjections.length === missionStops.length
       && missionStopProjections.length >= 2
       && missionStopProjections.at(-1)!.along
         > missionStopProjections[0]!.along + 5
     );
-    const finalAlong = hasCompleteLineGeometry
-      ? missionStopProjections.at(-1)!.along
+    const finalStopProjection = missionStops.length > 0
+      ? projectionForStop(missionStops.length - 1)
       : undefined;
+    const finalAlong = finalStopProjection?.along;
     const lineStartAlong = hasCompleteLineGeometry
       ? missionStopProjections[0]!.along
       : undefined;
@@ -1716,20 +2398,31 @@ export class RouteGuidanceEngine {
     const exactRemainingRouteDistance = exactPositionWithinLine
       ? Math.max(0, finalAlong - currentAlong)
       : undefined;
+    for (let index = 1; index < missionStopProjections.length; index += 1) {
+      const previous = missionStopProjections[index - 1];
+      const current = missionStopProjections[index];
+      if (current.along > previous.along + 5) {
+        this.confirmedSegmentDistances.set(
+          this.orderedStopProjectionStartIndex + index,
+          current.along - previous.along
+        );
+      }
+    }
     if (
       targetIndex !== undefined
       && targetIndex > 0
-      && nextStopDistance !== undefined
+      && projectedNextStopDistance !== undefined
+      && !targetOperationallyReached
     ) {
       this.observedSegmentLowerBounds.set(
         targetIndex,
         Math.max(
           this.observedSegmentLowerBounds.get(targetIndex) ?? 0,
-          nextStopDistance
+          projectedNextStopDistance
         )
       );
-      const previousStopProjection = missionStopProjections[targetIndex - 1];
-      const targetStopProjection = missionStopProjections[targetIndex];
+      const previousStopProjection = projectionForStop(targetIndex - 1);
+      const targetStopProjection = projectionForStop(targetIndex);
       if (
         previousStopProjection
         && targetStopProjection
@@ -1753,6 +2446,13 @@ export class RouteGuidanceEngine {
     const fallbackTotalRouteDistance = fallbackSegments
       ? fallbackSegments.reduce((sum, distance) => sum + distance, 0)
       : undefined;
+    const allSegmentDistancesConfirmed = Boolean(
+      directSegments
+      && directSegments.length > 0
+      && directSegments.every((_, index) => (
+        this.confirmedSegmentDistances.has(index + 1)
+      ))
+    );
     const fallbackRemainingRouteDistance = fallbackSegments
       && targetIndex !== undefined
       && nextStopDistance !== undefined
@@ -1769,7 +2469,8 @@ export class RouteGuidanceEngine {
     const remainingRouteDistance = exactRemainingRouteDistance
       ?? fallbackRemainingRouteDistance;
     const routeDistanceEstimated = exactTotalRouteDistance === undefined
-      && fallbackTotalRouteDistance !== undefined;
+      && fallbackTotalRouteDistance !== undefined
+      && !allSegmentDistancesConfirmed;
     const geometricProgress = exactTotalRouteDistance !== undefined
       && exactTotalRouteDistance > 5
       && lineStartAlong !== undefined
@@ -1779,22 +2480,22 @@ export class RouteGuidanceEngine {
         (currentAlong - lineStartAlong) / exactTotalRouteDistance
       ))
       : undefined;
-    const distanceFallbackProgress = fallbackTotalRouteDistance !== undefined
-      && fallbackTotalRouteDistance > 5
-      && fallbackRemainingRouteDistance !== undefined
+    const distanceFallbackProgress = totalRouteDistance !== undefined
+      && totalRouteDistance > 5
+      && remainingRouteDistance !== undefined
       ? Math.max(0, Math.min(
         1,
-        1 - fallbackRemainingRouteDistance / fallbackTotalRouteDistance
+        1 - remainingRouteDistance / totalRouteDistance
       ))
       : undefined;
     const fallbackProgress = nextStopDistance === undefined
-      || stopAlong === undefined
+      || guidanceStopAlong === undefined
       ? undefined
       : this.fallbackLineProgress(
         snapshot.mission,
         target,
         nextStopDistance,
-        Math.max(1, stopAlong)
+        Math.max(1, guidanceStopAlong)
       );
     const rawCandidateProgress = geometricProgress
       ?? distanceFallbackProgress
@@ -1820,11 +2521,11 @@ export class RouteGuidanceEngine {
     // nicht die fuer dessen Erkennung verfuegbare Kurvengeometrie. Wird genau
     // am Halt abgeschnitten, fehlt bei einem Abbieger kurz vor der Haltestelle
     // der ausgehende Ast und der H-Fallback verdraengt faelschlich den Pfeil.
-    const maneuverClassificationEnd = stopAlong === undefined
+    const maneuverClassificationEnd = guidanceStopAlong === undefined
       ? undefined
       : Math.min(
         polyline.total,
-        stopAlong + MANEUVER_POST_STOP_CONTEXT_METERS
+        guidanceStopAlong + MANEUVER_POST_STOP_CONTEXT_METERS
       );
     const maneuverScan: NonNullable<RouteGuidanceDebugInfo["maneuverScan"]> = {
       groups: []
@@ -1838,18 +2539,20 @@ export class RouteGuidanceEngine {
         maneuverScan
       );
     const detectedManeuver = geometryManeuver
-      && stopAlong !== undefined
-      && geometryManeuver.along < stopAlong - 8
+      && guidanceStopAlong !== undefined
+      && geometryManeuver.along < guidanceStopAlong - 8
       ? geometryManeuver
       : undefined;
     const fallbackManeuver: RouteManeuver | undefined = target.name !== "--"
-      && stopAlong !== undefined
+      && guidanceStopAlong !== undefined
       && nextStopDistance !== undefined
       && nextStopDistance <= 300
       ? {
-        kind: target.final ? "destination" : "stop",
-        along: stopAlong,
-        completeAlong: stopAlong
+        kind: target.kind === "terminal-pause"
+          ? "pause"
+          : target.final ? "destination" : "stop",
+        along: guidanceStopAlong,
+        completeAlong: guidanceStopAlong
       }
       : undefined;
     // Liegt zwischen Bus und Halt nach stabiler, lueckenarmer Geometrie kein
@@ -1861,7 +2564,7 @@ export class RouteGuidanceEngine {
       noDetectedManeuver: !detectedManeuver,
       movingForward: !reversing,
       targetKnown: target.name !== "--",
-      stopProjectionKnown: stopAlong !== undefined,
+      stopProjectionKnown: guidanceStopAlong !== undefined,
       stopDistanceKnown: nextStopDistance !== undefined,
       fartherThanStopFallback: nextStopDistance !== undefined
         && nextStopDistance > 300,
@@ -1869,29 +2572,76 @@ export class RouteGuidanceEngine {
         && nextStopDistance <= STRAIGHT_GUIDANCE_MAX_DISTANCE_METERS,
       routeStable: now - this.routeStableSince
         >= STRAIGHT_GUIDANCE_CONFIRMATION_MS,
-      continuousGeometry: stopAlong !== undefined
-        && isContinuousRouteInterval(polyline, currentAlong, stopAlong)
+      continuousGeometry: guidanceStopAlong !== undefined
+        && isContinuousRouteInterval(polyline, currentAlong, guidanceStopAlong)
     };
     const straightManeuver: RouteManeuver | undefined = Object.values(
       straightChecks
     ).every(Boolean)
       ? {
         kind: "straight",
-        along: stopAlong,
-        completeAlong: stopAlong
+        along: guidanceStopAlong,
+        completeAlong: guidanceStopAlong
       }
       : undefined;
-    const lockedManeuverActive = stopAlong !== undefined
+    const detectedSide = maneuverSide(detectedManeuver?.kind);
+    const latchedSide = maneuverSide(this.latchedManeuver?.kind);
+    const nearerOppositeManeuver = detectedManeuver !== undefined
+      && this.latchedManeuver !== undefined
+      && detectedSide !== undefined
+      && latchedSide !== undefined
+      && detectedSide !== latchedSide
+      && detectedManeuver.along + 12 < this.latchedManeuver.along;
+    if (nearerOppositeManeuver) {
+      // Eine bestaetigte Gegenrichtung, die deutlich vor dem verriegelten
+      // Manoever liegt, ist fachlich die naechste Anweisung. Das alte Latch
+      // stammt dann aus einer vorherigen Geometrievariante und darf den naeheren
+      // echten Abbieger nicht ueberschreiben.
+      this.latchedManeuver = undefined;
+      this.pendingManeuverExit = undefined;
+    }
+    const lockedManeuverActive = guidanceStopAlong !== undefined
       && this.shouldKeepLatchedManeuver(
         currentAlong,
         rawAlong,
         reversing,
         now
       );
+    // NAV-23: Liegt der Halt praktisch im Kurvenausgang, darf die allgemeine
+    // Manoever-Hysterese den bereits erreichten Abbiegepfeil nicht bis ueber
+    // den Haltepunkt verriegeln. Der Pfeil bleibt bis zum echten Kurveneintritt
+    // erhalten; erst danach uebernimmt der hoechstens 25 m entfernte Halt.
+    const stopAfterReachedManeuver = fallbackManeuver !== undefined
+      && nextStopDistance !== undefined
+      && nextStopDistance <= STOP_AFTER_MANEUVER_HANDOFF_METERS
+      && this.latchedManeuver !== undefined
+      && !["stop", "pause", "destination", "straight"].includes(
+        this.latchedManeuver.kind
+      )
+      && currentAlong >= this.latchedManeuver.along
+      && guidanceStopAlong !== undefined
+      && guidanceStopAlong <= this.latchedManeuver.completeAlong
+        + MANEUVER_EXIT_HYSTERESIS_METERS;
     let maneuver: RouteManeuver | undefined;
     let selectionReason = "none";
 
-    if (lockedManeuverActive) {
+    if (fallbackManeuver?.kind === "pause") {
+      // Ein von der Missionsstruktur bestaetigtes Start-/Terminalpaar ist ein
+      // betriebliches Ziel und keine normale Strassenkurve. Innerhalb des
+      // 300-m-Zielbereichs bleibt deshalb das Pausensymbol stabil, auch wenn
+      // The Bus im Terminal wiederholt bereits abgefahrene Lanes einblendet.
+      maneuver = fallbackManeuver;
+      selectionReason = targetOperationallyReached
+        ? "mission-terminal-pause-reached"
+        : "mission-terminal-pause";
+      this.latchedManeuver = undefined;
+      this.pendingManeuverExit = undefined;
+    } else if (stopAfterReachedManeuver) {
+      maneuver = fallbackManeuver;
+      selectionReason = "stop-after-reached-maneuver";
+      this.latchedManeuver = undefined;
+      this.pendingManeuverExit = undefined;
+    } else if (lockedManeuverActive) {
       maneuver = this.latchedManeuver!;
       selectionReason = "latched-maneuver";
     } else if (detectedManeuver) {
@@ -1996,6 +2746,7 @@ export class RouteGuidanceEngine {
       maneuverDistance,
       nextCurveDistance,
       nextRelevantStop: target.name,
+      nextTargetKind: target.kind,
       nextRelevantStopDistance: nextStopDistance,
       totalRouteDistance,
       remainingRouteDistance,
@@ -2014,9 +2765,12 @@ export class RouteGuidanceEngine {
       routeLaneCount: laneIds.length,
       debug: this.debugState(now, reversing ? "reversing" : "live", rejectReason, laneIds, {
         routeSignature: signature,
+        routeUpdateKind,
         targetIndex,
         targetName: target.name,
+        targetKind: target.kind,
         targetFinal: target.final,
+        targetOperationallyReached,
         currentAlong,
         rawAlong,
         projectionDistance: projection.distance,
@@ -2027,6 +2781,8 @@ export class RouteGuidanceEngine {
         segmentStartAlong,
         segmentEndAlong,
         stopAlong,
+        guidanceStopAlong,
+        projectedNextStopDistance,
         nextStopDistance,
         stopProjectionCandidates: stopProjectionCandidates
           .slice()
@@ -2061,9 +2817,13 @@ export class RouteGuidanceEngine {
 
   private resetRouteState(): void {
     this.routeSignature = "";
+    this.routeLaneIds = [];
     this.routeStableSince = 0;
     this.polyline = undefined;
     this.orderedStopProjectionCache = [];
+    this.orderedStopProjectionStartIndex = 0;
+    this.routeGeometryScope = "next-segment";
+    this.routePathLaneCounts = [];
     this.previousAlong = undefined;
     this.latchedManeuver = undefined;
     this.pendingProjectionJump = undefined;

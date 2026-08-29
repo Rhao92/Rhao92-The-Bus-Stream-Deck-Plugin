@@ -21,9 +21,9 @@ def check(condition: bool, message: str) -> None:
 check(MANIFEST["Name"] == "Rhao92's The Bus Stream Deck Plugin", "Plugin-Name")
 check(MANIFEST["Category"] == MANIFEST["Name"], "Einheitliche Kategorie")
 check(MANIFEST["Author"] == "Rhao92", "Plugin-Autor")
-check(MANIFEST["Version"] == "2.15.0.18", "Manifest-Version")
+check(MANIFEST["Version"] == "2.16.0.21", "Manifest-Version")
 check(PACKAGE["name"] == "rhao92-the-bus-telemetry-interface", "package.json-Name")
-check(PACKAGE["version"] == "2.15.0-beta.18", "package.json-Version")
+check(PACKAGE["version"] == "2.16.0", "package.json-Version")
 check(LOCK["version"] == PACKAGE["version"], "package-lock Hauptversion")
 check(LOCK["packages"][""]["version"] == PACKAGE["version"], "package-lock Rootversion")
 
@@ -32,14 +32,15 @@ uuids = [entry["UUID"] for entry in actions]
 check(len(actions) == 50, "Erwartet 50 Manifest-Actions")
 check(len(uuids) == len(set(uuids)), "Doppelte Manifest-UUID")
 
-category_icon = Image.open(PLUGIN / "imgs" / "plugin" / "category.png").convert("RGB")
-marketplace_icon = Image.open(PLUGIN / "imgs" / "plugin" / "marketplace.png").convert("RGB")
-check(category_icon.size == (144, 144), "Kategorieicon-Größe")
-check(marketplace_icon.size == (144, 144), "Marketplaceicon-Größe")
-check(
-    ImageChops.difference(category_icon, marketplace_icon).getbbox() is None,
-    "Pluginicons weichen voneinander ab",
-)
+plugin_icon_sizes = {
+    "category.png": (28, 28),
+    "category@2x.png": (56, 56),
+    "marketplace.png": (256, 256),
+    "marketplace@2x.png": (512, 512),
+}
+for filename, expected_size in plugin_icon_sizes.items():
+    with Image.open(PLUGIN / "imgs" / "plugin" / filename) as image:
+        check(image.size == expected_size, f"Falsche Pluginicon-Größe: {filename}")
 
 source_uuids: set[str] = set()
 for source in (ROOT / "src").rglob("*.ts"):
@@ -83,6 +84,17 @@ for path in png_files:
     with Image.open(path) as image:
         sizes[image.size] = sizes.get(image.size, 0) + 1
         check(image.mode in {"RGBA", "RGB", "P"}, f"Unerwarteter Bildmodus: {path}")
+
+visible_actions = [entry for entry in actions if entry.get("VisibleInActionsList", True)]
+visible_icon_refs = {entry["Icon"] for entry in visible_actions}
+check(len(visible_actions) == 27, "Erwartet 27 sichtbare Actions")
+check(len(visible_icon_refs) == 25, "Erwartet 25 eindeutige sichtbare Listenicons")
+for reference in visible_icon_refs:
+    for suffix, expected_size in (("", (20, 20)), ("@2x", (40, 40))):
+        icon_path = PLUGIN / f"{reference}{suffix}.png"
+        check(icon_path.exists(), f"Listenicon fehlt: {icon_path}")
+        with Image.open(icon_path) as image:
+            check(image.size == expected_size, f"Falsche Listenicon-Größe: {icon_path}")
 
 # Farbe des großen Zentralpiktogramms anhand ausreichend gesättigter Pixel.
 def hue_count(relative: str, expected_hue: float, tolerance: float = 0.08) -> int:
@@ -184,7 +196,7 @@ for marker in [
     "Coins800",
     "Take Cash Money",
     "NUR ANZEIGE",
-    "2.15 BETA",
+    "2.16",
     "Navigation Blackbox",
 ]:
     check(marker in bundle, f"Runtime-Bundle-Marker fehlt: {marker}")

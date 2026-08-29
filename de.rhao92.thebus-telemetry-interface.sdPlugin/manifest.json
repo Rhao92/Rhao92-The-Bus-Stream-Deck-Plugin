@@ -1,13 +1,13 @@
 {
   "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
   "Name": "Rhao92's The Bus Stream Deck Plugin",
-  "Version": "2.15.0.18",
+  "Version": "2.16.0.21",
   "Author": "Rhao92",
   "Actions": [
     {
       "Name": "Fullpanel",
       "UUID": "de.rhao92.thebus-telemetry-interface.fullpanel",
-      "Icon": "imgs/actions/fullpanel/icon",
+      "Icon": "imgs/action-list/fullpanel",
       "Tooltip": "Vollbreiten-Dashboard für Fahrplan, Fahrzeug und Navigation auf allen vier Stream-Deck-Plus-Reglern.",
       "Controllers": [
         "Encoder"
@@ -17,8 +17,8 @@
         "layout": "layouts/touch-segment.json",
         "StackColor": "#78D83A",
         "TriggerDescription": {
-          "Rotate": "Regler testen",
-          "Push": "Dashboard wechseln oder STOP testen",
+          "Rotate": "Nur Anzeige",
+          "Push": "Dashboard wechseln (Regler 1)",
           "Touch": "Dashboard wechseln"
         }
       },
@@ -32,7 +32,7 @@
     {
       "Name": "Fahrplan · Einzelpanel",
       "UUID": "de.rhao92.thebus-telemetry-interface.timetable-panel",
-      "Icon": "imgs/actions/single-timetable/icon",
+      "Icon": "imgs/action-list/single-timetable",
       "Tooltip": "Eine gemeinsame Fahrplan-Action für Haltestelle, Ankunft, Abfahrt, Abweichung, Ingame-Zeit oder Status.",
       "Controllers": [
         "Encoder"
@@ -58,7 +58,7 @@
     {
       "Name": "Fahrplan · Button",
       "UUID": "de.rhao92.thebus-telemetry-interface.timetable-button",
-      "Icon": "imgs/actions/key-timetable/action",
+      "Icon": "imgs/action-list/key-timetable",
       "Tooltip": "Eine gemeinsame Fahrplan-Taste für Haltestelle, Ankunft, Abfahrt, Abweichung, Ingame-Zeit oder Status.",
       "Controllers": [
         "Keypad"
@@ -74,7 +74,7 @@
     {
       "Name": "Fahrplan · Haltewunsch",
       "UUID": "de.rhao92.thebus-telemetry-interface.stop-request",
-      "Icon": "imgs/actions/stop-request/action",
+      "Icon": "imgs/action-list/stop-request",
       "Tooltip": "Zeigt einen aktiven Haltewunsch telemetriebasiert mit 2-Hz-Blinken an.",
       "Controllers": [
         "Keypad"
@@ -98,7 +98,7 @@
     {
       "Name": "Navigation",
       "UUID": "de.rhao92.thebus-telemetry-interface.navigation-maneuver",
-      "Icon": "imgs/actions/navigation/action",
+      "Icon": "imgs/action-list/navigation",
       "Tooltip": "Bevorzugte Navigationstaste: dynamischer Manöverpfeil und zugehörige Entfernung aus demselben NAV-07-verriegelten Manöver.",
       "Controllers": [
         "Keypad"
@@ -226,7 +226,7 @@
     {
       "Name": "Navigation · Debug speichern",
       "UUID": "de.rhao92.thebus-telemetry-interface.navigation-debug-capture",
-      "Icon": "imgs/actions/navigation/action",
+      "Icon": "imgs/action-list/navigation",
       "Tooltip": "Beta-Diagnose: speichert die letzten 60 Sekunden als TXT im Dokumente-Unterordner Projekte\\The Bus\\NaviDebug.",
       "Controllers": [
         "Keypad"
@@ -241,7 +241,7 @@
     {
       "Name": "Fahrzeug · Geschwindigkeit",
       "UUID": "de.rhao92.thebus-telemetry-interface.vehicle-speed",
-      "Icon": "imgs/actions/key-speed/action",
+      "Icon": "imgs/action-list/key-speed",
       "Tooltip": "Zeigt die aktuelle Geschwindigkeit: bis Limit weiß, +1 bis +4 gelb, ab +5 km/h rot.",
       "Controllers": [
         "Keypad"
@@ -256,7 +256,7 @@
     {
       "Name": "Fahrzeug · Tempolimit",
       "UUID": "de.rhao92.thebus-telemetry-interface.vehicle-speed-limit",
-      "Icon": "imgs/actions/key-speed-limit/action",
+      "Icon": "imgs/action-list/key-speed-limit",
       "Tooltip": "Zeigt das aktuell gemeldete Tempolimit als Verkehrsschild.",
       "Controllers": [
         "Keypad"
@@ -271,8 +271,8 @@
     {
       "Name": "Fahrzeug · Leistung",
       "UUID": "de.rhao92.thebus-telemetry-interface.vehicle-power",
-      "Icon": "imgs/actions/key-power/action",
-      "Tooltip": "Zeigt die elektrische Leistung direkt aus Powermeter in kW mit einer Nachkommastelle.",
+      "Icon": "imgs/action-list/key-power",
+      "Tooltip": "Zeigt vorhandene direkte Powermeter-Leistung; beim eBus ohne Powermeter den Fahrtverbrauch aus bestätigter Batterieenergie und tatsächlich gefahrener Strecke. Ein Druck setzt nur diesen Fahrt-Durchschnitt zurück.",
       "Controllers": [
         "Keypad"
       ],
@@ -286,7 +286,7 @@
     {
       "Name": "Fahrzeug · Akku",
       "UUID": "de.rhao92.thebus-telemetry-interface.vehicle-battery",
-      "Icon": "imgs/actions/key-battery/action",
+      "Icon": "imgs/action-list/key-battery",
       "Tooltip": "Zeigt den gemeldeten eCitaro-Akkustand aus DisplayFuel in Prozent.",
       "Controllers": [
         "Keypad"
@@ -301,7 +301,7 @@
     {
       "Name": "Klima · Steuerung",
       "UUID": "de.rhao92.thebus-telemetry-interface.hvac-control",
-      "Icon": "imgs/actions/hvac/action",
+      "Icon": "imgs/action-list/hvac",
       "Tooltip": "Eine fahrzeugunabhängige Klimataste für Ein/Aus, Solltemperatur ±1 °C oder die tatsächlich gemeldete Lüftungssteuerung. Anzeige und Befehle werden dynamisch aus Buttons und Actions abgeleitet.",
       "Controllers": [
         "Keypad"
@@ -317,7 +317,7 @@
     {
       "Name": "Klima · Regler",
       "UUID": "de.rhao92.thebus-telemetry-interface.hvac-dial",
-      "Icon": "imgs/actions/hvac/action",
+      "Icon": "imgs/action-list/hvac",
       "Tooltip": "Ein konfigurierbarer Stream-Deck-Plus-Regler für Luftverteilung, Solltemperatur oder Lüftergeschwindigkeit. Befehle und Anzeige folgen den echten Fahrzeugreglern.",
       "Controllers": [
         "Encoder"
@@ -343,7 +343,7 @@
     {
       "Name": "Türen · Türsteuerung",
       "UUID": "de.rhao92.thebus-telemetry-interface.door-control",
-      "Icon": "imgs/actions/all-doors/action",
+      "Icon": "imgs/action-list/all-doors",
       "Tooltip": "Eine konfigurierbare Taste für alle Türen oder Tür 1 bis 4. Anzeige und Animation folgen der bestätigten Türtelemetrie.",
       "Controllers": [
         "Keypad"
@@ -359,7 +359,7 @@
     {
       "Name": "Türen · Türfreigabe",
       "UUID": "de.rhao92.thebus-telemetry-interface.door-clearance",
-      "Icon": "imgs/actions/door-clearance/action",
+      "Icon": "imgs/action-list/door-clearance",
       "Tooltip": "Schaltet die Türfreigabe um; die Anzeige folgt ausschließlich der bestätigten ButtonLight-Telemetrie.",
       "Controllers": [
         "Keypad"
@@ -380,7 +380,7 @@
     {
       "Name": "Türen · Automatisches Türschließen",
       "UUID": "de.rhao92.thebus-telemetry-interface.automatic-door-closing",
-      "Icon": "imgs/actions/automatic-door-closing/action",
+      "Icon": "imgs/action-list/automatic-door-closing",
       "Tooltip": "Schaltet das automatische Schließen der hinteren Türen um und zeigt nur den bestätigten Fahrzeugzustand an.",
       "Controllers": [
         "Keypad"
@@ -401,7 +401,7 @@
     {
       "Name": "Fahrt · Gangwahl",
       "UUID": "de.rhao92.thebus-telemetry-interface.gear-selector",
-      "Icon": "imgs/actions/gear-drive/action",
+      "Icon": "imgs/action-list/gear-drive",
       "Tooltip": "Eine konfigurierbare Taste für D, N oder R. Der aktive Gang wird ausschließlich telemetriebasiert angezeigt.",
       "Controllers": [
         "Keypad"
@@ -417,7 +417,7 @@
     {
       "Name": "Fahrt · Blinker",
       "UUID": "de.rhao92.thebus-telemetry-interface.indicator-control",
-      "Icon": "imgs/actions/indicator-left/action",
+      "Icon": "imgs/action-list/indicator-left",
       "Tooltip": "Eine konfigurierbare Taste für Blinker links, Blinker rechts oder Warnblinker. Die Blinkphase folgt den echten Ingame-Lampenwerten.",
       "Controllers": [
         "Keypad"
@@ -433,7 +433,7 @@
     {
       "Name": "Fahrt · Zündung",
       "UUID": "de.rhao92.thebus-telemetry-interface.ignition",
-      "Icon": "imgs/actions/ignition/action",
+      "Icon": "imgs/action-list/ignition",
       "Tooltip": "Halten wie im Bus. Offline, Aus, Zündung und Motor folgen ausschließlich EngineStarted/IgnitionEnabled; widersprüchliche Langdruck-Zwischenwerte werden gefiltert.",
       "Controllers": [
         "Keypad"
@@ -457,7 +457,7 @@
     {
       "Name": "Fahrt · Feststellbremse",
       "UUID": "de.rhao92.thebus-telemetry-interface.parking-brake",
-      "Icon": "imgs/actions/parking-brake/action",
+      "Icon": "imgs/action-list/parking-brake",
       "Tooltip": "Schaltet die Feststellbremse. Die Anzeige folgt ausschließlich Parking Brake.State beziehungsweise FixingBrake.",
       "Controllers": [
         "Keypad"
@@ -478,7 +478,7 @@
     {
       "Name": "Fahrt · Retarder",
       "UUID": "de.rhao92.thebus-telemetry-interface.retarder-control",
-      "Icon": "imgs/actions/retarder/action",
+      "Icon": "imgs/action-list/retarder",
       "Tooltip": "Zeigt die echte Retarderhebel-Stufe und bedient nur die vom Fahrzeug gemeldeten Retarder-Events. Stufe höher/niedriger, aus oder direkte Stufenwahl sind konfigurierbar.",
       "Controllers": [
         "Keypad"
@@ -494,7 +494,7 @@
     {
       "Name": "Fahrt · Sonnenblende",
       "UUID": "de.rhao92.thebus-telemetry-interface.sun-blind",
-      "Icon": "imgs/actions/sun-blind/action",
+      "Icon": "imgs/action-list/sun-blind",
       "Tooltip": "Drücken und halten fährt die Fahrer-Sonnenblende über die gemeldeten Window-Shade-Events; Loslassen stoppt die Bewegung. Richtung und Anzeige folgen ausschließlich dem bestätigten Zustand.",
       "Controllers": [
         "Keypad"
@@ -509,7 +509,7 @@
     {
       "Name": "Fahrt · Scheibenwischer",
       "UUID": "de.rhao92.thebus-telemetry-interface.wiper-control",
-      "Icon": "imgs/actions/wiper/action",
+      "Icon": "imgs/action-list/wiper",
       "Tooltip": "Zeigt die echte Wischerstufe und sendet je nach Konfiguration WiperUp oder WiperDown. An den bestätigten Endstufen wird kein Befehl gesendet.",
       "Controllers": [
         "Keypad"
@@ -525,7 +525,7 @@
     {
       "Name": "Einstieg · Kneeling",
       "UUID": "de.rhao92.thebus-telemetry-interface.kneeling-control",
-      "Icon": "imgs/actions/kneeling/action",
+      "Icon": "imgs/action-list/kneeling",
       "Tooltip": "Eine konfigurierbare Taste für manuelles oder automatisches Kneeling.",
       "Controllers": [
         "Keypad"
@@ -541,7 +541,7 @@
     {
       "Name": "Einstieg · Rollstuhlrampe",
       "UUID": "de.rhao92.thebus-telemetry-interface.ramp",
-      "Icon": "imgs/actions/ramp/action",
+      "Icon": "imgs/action-list/ramp",
       "Tooltip": "Bedient die Rampe und zeigt telemetriebasiert gesperrt, bereit oder ausgefahren an.",
       "Controllers": [
         "Keypad"
@@ -565,7 +565,7 @@
     {
       "Name": "Licht · Außenbeleuchtung",
       "UUID": "de.rhao92.thebus-telemetry-interface.exterior-light-control",
-      "Icon": "imgs/actions/exterior-lights/action",
+      "Icon": "imgs/action-list/exterior-lights",
       "Tooltip": "Konfigurierbare Außenlicht-Taste. Lichtschalter hoch/runter und Fernlicht senden belegte Events; Tagfahr-, Stand-, Abblend- und Nebellicht bleiben ohne belegtes Einzel-Event reine Telemetrieanzeigen.",
       "Controllers": [
         "Keypad"
@@ -581,7 +581,7 @@
     {
       "Name": "Licht · Fahrgastraumlicht",
       "UUID": "de.rhao92.thebus-telemetry-interface.passenger-light-control",
-      "Icon": "imgs/actions/passenger-lights/action",
+      "Icon": "imgs/action-list/passenger-lights",
       "Tooltip": "Eine konfigurierbare Taste zum Ein-/Ausschalten, Dimmen oder Aufhellen der Fahrgastraumbeleuchtung.",
       "Controllers": [
         "Keypad"
@@ -597,7 +597,7 @@
     {
       "Name": "Ticketing · ATRON-Steuerung",
       "UUID": "de.rhao92.thebus-telemetry-interface.ticket-control",
-      "Icon": "imgs/actions/ticket-control/action",
+      "Icon": "imgs/action-list/ticket-control",
       "Tooltip": "Bedient ausschließlich belegte ATRON-Tasten: Bordcomputer auswählen, gemeldete Münztasten und Take Cash Money. Ticket-, Preis-, Zahl- oder Belegdaten werden ohne echte Sales-Telemetrie nicht angezeigt.",
       "Controllers": [
         "Keypad"

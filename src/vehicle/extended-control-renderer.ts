@@ -9,6 +9,7 @@ import type {
   WiperState
 } from "../core/extended-controls";
 import { TICKET_CONTROL_DEFINITIONS } from "../core/extended-controls";
+import { translateUi } from "../core/localization";
 
 const COLORS = {
   active: "#38c9ff",
@@ -31,7 +32,7 @@ function dataUri(svg: string): string {
   return `data:image/svg+xml;base64,${Buffer.from(svg, "utf8").toString("base64")}`;
 }
 
-function frame(content: string, color: string, title = "FAHRZEUGFUNKTION"): string {
+function frame(content: string, color: string, title = translateUi("vehicle_function")): string {
   return dataUri(`<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
   <title>${escapeXml(title)}</title>
   <defs><filter id="g" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="${color}" flood-opacity=".82"/></filter></defs>
@@ -39,14 +40,14 @@ function frame(content: string, color: string, title = "FAHRZEUGFUNKTION"): stri
   <rect x="4" y="4" width="136" height="136" rx="19" fill="#061018" stroke="${color}" stroke-width="3" filter="url(#g)"/>
   <rect x="8" y="8" width="128" height="128" rx="16" fill="#02070b" fill-opacity=".84" stroke="#fff" stroke-opacity=".07"/>
   ${content}
-  <text x="135" y="136" text-anchor="end" font-family="Arial,Helvetica,sans-serif" font-size="4" font-weight="700" fill="#fff" fill-opacity=".22">2.15 BETA</text>
+  <text x="135" y="136" text-anchor="end" font-family="Arial,Helvetica,sans-serif" font-size="4" font-weight="700" fill="#fff" fill-opacity=".22">2.16</text>
   </svg>`);
 }
 
 function unavailable(label: string, icon: string): string {
   return frame(`<g opacity=".72">${icon}</g>
   <path d="M31 111L113 29" stroke="${COLORS.unavailable}" stroke-width="7" stroke-linecap="round" filter="url(#g)"/>
-  <text x="72" y="124" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="900" fill="${COLORS.value}">--</text>`, COLORS.unavailable, `${label}: NICHT VERFÜGBAR`);
+  <text x="72" y="124" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="900" fill="${COLORS.value}">--</text>`, COLORS.unavailable, `${label}: ${translateUi("not_available")}`);
 }
 
 function arrow(direction: "up" | "down", color: string, x = 105, y = 35): string {
@@ -122,12 +123,12 @@ export function renderRetarderKey(
     return unavailable("RETARDER", retarderIcon(undefined, COLORS.unavailable));
   }
   const detail = mode === "increase"
-    ? "STUFE HÖHER"
+    ? translateUi("stage_higher")
     : mode === "decrease"
-      ? "STUFE NIEDRIGER"
+      ? translateUi("stage_lower")
       : mode === "off"
-        ? "RETARDER AUS"
-        : `ZIEL ${mode.slice(-1)}`;
+        ? translateUi("retarder_off")
+        : `${translateUi("target")} ${mode.slice(-1)}`;
   const control = mode === "increase"
     ? arrow("up", COLORS.active)
     : mode === "decrease"
@@ -136,7 +137,7 @@ export function renderRetarderKey(
         ? `<path d="M92 45L116 21" stroke="${COLORS.active}" stroke-width="7" stroke-linecap="round"/>`
         : `<circle cx="106" cy="34" r="16" fill="#061018" stroke="${COLORS.active}" stroke-width="4"/><text x="106" y="42" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="900" fill="${COLORS.value}">${mode.slice(-1)}</text>`;
   const value = mode === "off"
-    ? "AUS"
+    ? translateUi("off")
     : mode.startsWith("level-")
       ? `→ R${mode.slice(-1)}`
       : mode === "increase" ? "▲" : "▼";
@@ -147,12 +148,12 @@ export function renderRetarderKey(
 export function renderSunBlindKey(state: SunBlindState | undefined): string {
   if (!state) {
     return unavailable(
-      "SONNENBLENDE",
+      translateUi("sun_blind"),
       sunBlindIcon(undefined, COLORS.unavailable)
     );
   }
   return frame(`${sunBlindIcon(state, COLORS.active)}
-  <text x="72" y="124" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="17" font-weight="900" letter-spacing=".7" fill="${COLORS.value}">HALTEN</text>`, COLORS.active, `SONNENBLENDE ${state === "up" ? "OBEN" : "UNTEN"}: HALTEN zum ${state === "up" ? "herunter" : "hoch"}fahren`);
+  <text x="72" y="124" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="17" font-weight="900" letter-spacing=".7" fill="${COLORS.value}">${translateUi("hold")}</text>`, COLORS.active, `${translateUi("sun_blind")} ${state === "up" ? translateUi("top") : translateUi("bottom")}: ${translateUi("hold")} – ${state === "up" ? translateUi("move_down") : translateUi("move_up")}`);
 }
 
 export function renderWiperKey(
@@ -161,28 +162,28 @@ export function renderWiperKey(
 ): string {
   if (!state) {
     return unavailable(
-      "SCHEIBENWISCHER",
+      translateUi("windshield_wiper"),
       wiperIcon(COLORS.unavailable)
     );
   }
   const labels: Record<WiperState, string> = {
-    Off: "AUS",
+    Off: translateUi("off"),
     Interval: "INT",
     On: "1",
     Fast: "2"
   };
   const color = state === "Off" ? COLORS.inactive : COLORS.active;
   return frame(`${wiperIcon(color)}${arrow(mode === "increase" ? "up" : "down", color)}
-  <text x="72" y="124" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="900" fill="${COLORS.value}">${labels[state]}</text>`, color, `SCHEIBENWISCHER ${state}; ${mode === "increase" ? "STUFE HÖHER" : "STUFE NIEDRIGER"}`);
+  <text x="72" y="124" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="900" fill="${COLORS.value}">${labels[state]}</text>`, color, `${translateUi("windshield_wiper")} ${state}; ${mode === "increase" ? translateUi("stage_higher") : translateUi("stage_lower")}`);
 }
 
 function lightSwitchLabel(state: ExteriorLightState["switchState"]): string {
   switch (state) {
-    case "Off": return "AUS";
-    case "Parking Lights": return "STAND";
-    case "Headlights": return "ABBLEND";
-    case "Front Fog Light": return "NEBEL V";
-    case "Rear Fog Light": return "NEBEL H";
+    case "Off": return translateUi("off");
+    case "Parking Lights": return translateUi("parking_short");
+    case "Headlights": return translateUi("headlights_short");
+    case "Front Fog Light": return translateUi("front_fog_short");
+    case "Rear Fog Light": return translateUi("rear_fog_short");
     default: return "--";
   }
 }
@@ -193,11 +194,11 @@ export function renderExteriorLightKey(
 ): string {
   if (mode === "switch-up" || mode === "switch-down") {
     if (!state.switchState) {
-      return unavailable("LICHTSCHALTER", lightIcon(COLORS.unavailable));
+      return unavailable(translateUi("light_switch"), lightIcon(COLORS.unavailable));
     }
     const color = state.switchState === "Off" ? COLORS.inactive : COLORS.active;
     return frame(`${lightIcon(color)}${arrow(mode === "switch-up" ? "up" : "down", color)}
-    <text x="72" y="124" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="17" font-weight="900" fill="${COLORS.value}">${lightSwitchLabel(state.switchState)}</text>`, color, `LICHTSCHALTER ${state.switchState}; ${mode === "switch-up" ? "POSITION HÖHER" : "POSITION NIEDRIGER"}`);
+    <text x="72" y="124" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="17" font-weight="900" fill="${COLORS.value}">${lightSwitchLabel(state.switchState)}</text>`, color, `${translateUi("light_switch")} ${state.switchState}; ${mode === "switch-up" ? translateUi("position_higher") : translateUi("position_lower")}`);
   }
 
   const source: Record<Exclude<ExteriorLightMode, "switch-up" | "switch-down">, boolean | undefined> = {
@@ -209,12 +210,12 @@ export function renderExteriorLightKey(
     "rear-fog": state.rearFog
   };
   const labels: Record<Exclude<ExteriorLightMode, "switch-up" | "switch-down">, string> = {
-    daytime: "TAGFAHRLICHT",
-    parking: "STANDLICHT",
-    headlights: "ABBLENDLICHT",
-    "high-beam": "FERNLICHT",
-    "front-fog": "NEBEL VORNE",
-    "rear-fog": "NEBEL HINTEN"
+    daytime: translateUi("daytime_lights"),
+    parking: translateUi("parking_lights"),
+    headlights: translateUi("headlights"),
+    "high-beam": translateUi("high_beam"),
+    "front-fog": translateUi("front_fog"),
+    "rear-fog": translateUi("rear_fog")
   };
   const active = source[mode];
   const iconKind = mode === "parking"
@@ -232,7 +233,7 @@ export function renderExteriorLightKey(
     ? `<path d="M103 30V25A9 9 0 0 1 121 25V30M100 30H124V49H100Z" fill="#061018" stroke="${color}" stroke-width="4" stroke-linejoin="round"/><circle cx="112" cy="39" r="2.5" fill="${color}"/>`
     : "";
   return frame(`${lightIcon(color, iconKind)}${lock}
-  <text x="72" y="124" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="900" fill="${COLORS.value}">${active ? "EIN" : "AUS"}</text>`, color, `${labels[mode]} ${active ? "EIN" : "AUS"}; ${displayOnly ? "NUR ANZEIGE" : "UMSCHALTEN"}`);
+  <text x="72" y="124" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="900" fill="${COLORS.value}">${active ? translateUi("enabled") : translateUi("off")}</text>`, color, `${labels[mode]} ${active ? translateUi("enabled") : translateUi("off")}; ${displayOnly ? translateUi("display_only") : translateUi("toggle")}`);
 }
 
 export function renderTicketControlKey(
@@ -250,19 +251,19 @@ export function renderTicketControlKey(
     return unavailable(
       mode === "take-cash"
         ? "TAKE CASH"
-        : isCoin ? "ATRON MÜNZE" : "ATRON",
+        : isCoin ? translateUi("atron_coin") : "ATRON",
       unavailableIcon
     );
   }
   if (mode === "atron") {
     return frame(`${displayIcon(COLORS.available)}
-    <text x="72" y="124" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="900" fill="${COLORS.value}">ATRON</text>`, COLORS.available, "BORDCOMPUTER ATRON AUSWÄHLEN; ECHTES EVENT");
+    <text x="72" y="124" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="900" fill="${COLORS.value}">ATRON</text>`, COLORS.available, `${translateUi("onboard_computer_select")}; ${translateUi("real_event")}`);
   }
   if (mode === "take-cash") {
     return frame(`${cashIcon(COLORS.available)}
-    <text x="72" y="126" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="900" fill="${COLORS.value}">ANNEHMEN</text>`, COLORS.available, "BARGELD TAKE CASH; ECHTES EVENT");
+    <text x="72" y="126" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="900" fill="${COLORS.value}">${translateUi("accept")}</text>`, COLORS.available, `${translateUi("cash")} TAKE CASH; ${translateUi("real_event")}`);
   }
   return frame(`<circle cx="72" cy="65" r="38" fill="#061018" stroke="${COLORS.available}" stroke-width="6" filter="url(#g)"/>
   <text x="72" y="75" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="25" font-weight="900" fill="${COLORS.value}">${escapeXml(definition.value.replace(" €", ""))}</text>
-  <text x="72" y="124" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="900" fill="${COLORS.available}">€</text>`, COLORS.available, `ATRON MÜNZE ${definition.value}; ECHTES EVENT`);
+  <text x="72" y="124" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="900" fill="${COLORS.available}">€</text>`, COLORS.available, `${translateUi("atron_coin")} ${definition.value}; ${translateUi("real_event")}`);
 }

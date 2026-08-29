@@ -3,6 +3,7 @@ import streamDeck, {
   DialAction,
   DidReceiveSettingsEvent,
   KeyAction,
+  KeyDownEvent,
   SingletonAction,
   WillAppearEvent,
   WillDisappearEvent
@@ -20,6 +21,7 @@ import {
   TimetableKind
 } from "../fullpanel/types";
 import { FullpanelViewModelHub } from "../fullpanel/view-model-hub";
+import { translateUi } from "../core/localization";
 
 type TimetableSettings = {
   kind?: string;
@@ -75,9 +77,9 @@ abstract class ConfigurableTimetableDisplayAction
       await Promise.allSettled([
         dial.setFeedbackLayout(FULLPANEL_LAYOUT),
         dial.setTriggerDescription({
-          rotate: "Nur Anzeige",
-          push: "Nur Anzeige",
-          touch: "Nur Anzeige"
+          rotate: translateUi("only_display"),
+          push: translateUi("only_display"),
+          touch: translateUi("only_display")
         })
       ]);
     } else {
@@ -275,7 +277,7 @@ export class TimetableButtonAction extends ConfigurableTimetableDisplayAction {
 abstract class VehicleKeypadDisplayAction extends SingletonAction {
   protected abstract readonly kind: VehicleDisplayKind;
 
-  private readonly telemetryHub = FullpanelViewModelHub.instance;
+  protected readonly telemetryHub = FullpanelViewModelHub.instance;
   private readonly contexts = new Map<string, KeyAction>();
   private readonly lastImages = new Map<string, string>();
   private unsubscribeTelemetry: (() => void) | undefined;
@@ -409,6 +411,10 @@ export class VehicleSpeedLimitAction extends VehicleKeypadDisplayAction {
 @action({ UUID: "de.rhao92.thebus-telemetry-interface.vehicle-power" })
 export class VehiclePowerAction extends VehicleKeypadDisplayAction {
   protected readonly kind = "power";
+
+  override onKeyDown(_ev: KeyDownEvent): void {
+    this.telemetryHub.resetAverageConsumption();
+  }
 }
 
 @action({ UUID: "de.rhao92.thebus-telemetry-interface.vehicle-battery" })

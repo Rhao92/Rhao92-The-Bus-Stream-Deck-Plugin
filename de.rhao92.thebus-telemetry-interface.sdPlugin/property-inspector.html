@@ -75,14 +75,15 @@
     .status.visible { opacity: 1; }
   </style>
 </head>
-<body>
+<body data-title-suffix="Action konfigurieren">
   <div class="group">
-    <label for="mode">Funktion</label>
-    <select id="mode" disabled aria-label="Funktion auswählen"></select>
+    <label for="mode" data-i18n="Funktion">Funktion</label>
+    <select id="mode" disabled aria-label="Funktion auswählen" data-i18n-aria="Funktion auswählen"></select>
   </div>
-  <p class="hint" id="hint">Die Auswahl wird automatisch für diese Taste gespeichert.</p>
-  <p class="status" id="status" role="status">Gespeichert</p>
+  <p class="hint" id="hint" data-i18n="Die Auswahl wird automatisch für diese Taste gespeichert.">Die Auswahl wird automatisch für diese Taste gespeichert.</p>
+  <p class="status" id="status" role="status" data-i18n="Gespeichert">Gespeichert</p>
 
+  <script src="property-inspector/i18n.js"></script>
   <script>
     const CONFIGS = {
       "de.rhao92.thebus-telemetry-interface.door-control": {
@@ -198,6 +199,7 @@
       info,
       actionInfo
     ) {
+      TheBusI18n.setLanguage(info);
       const parsedActionInfo = JSON.parse(actionInfo);
       // Aktuelle Stream-Deck-Versionen liefern den Action-Kontext in
       // actionInfo.context. Einige ältere/abweichende Hosts verwenden für
@@ -240,7 +242,7 @@
 
             if (pendingMode !== null && settings.mode === pendingMode) {
               pendingMode = null;
-              showStatus("Gespeichert");
+              showStatus(TheBusI18n.text("Gespeichert"));
             }
           }
         } catch (error) {
@@ -252,7 +254,7 @@
     modeSelect.addEventListener("change", () => {
       settings = { ...settings, mode: modeSelect.value };
       pendingMode = modeSelect.value;
-      showStatus("Speichere …");
+      showStatus(TheBusI18n.text("Speichere …"));
       saveSettings();
     });
 
@@ -260,7 +262,7 @@
       const config = CONFIGS[actionUuid];
 
       if (!config) {
-        modeSelect.innerHTML = '<option>Keine Konfiguration verfügbar</option>';
+        modeSelect.innerHTML = `<option>${TheBusI18n.text("Keine Konfiguration verfügbar")}</option>`;
         modeSelect.disabled = true;
         return;
       }
@@ -270,7 +272,7 @@
       for (const [value, label] of config.options) {
         const option = document.createElement("option");
         option.value = value;
-        option.textContent = label;
+        option.textContent = TheBusI18n.text(label);
         modeSelect.appendChild(option);
       }
 
@@ -330,7 +332,7 @@
       status.classList.add("visible");
       statusTimer = window.setTimeout(() => {
         status.classList.remove("visible");
-      }, text === "Gespeichert" ? 900 : 1800);
+      }, text === TheBusI18n.text("Gespeichert") ? 900 : 1800);
     }
   </script>
 </body>

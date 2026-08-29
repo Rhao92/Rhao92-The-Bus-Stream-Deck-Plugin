@@ -1,4 +1,10 @@
 // @ts-nocheck -- getestete 2.13.0.27-Lablogik, unverändert migriert.
+import {
+  formatUiDecimal,
+  getDisplayLanguage,
+  normalizeDisplayLanguage,
+  translateUi,
+} from "../core/localization";
 const API_BASE = "http://127.0.0.1:37337";
 export const FULLPANEL_POLL_INTERVALS = Object.freeze({
   vehicleMs: 100,
@@ -18,6 +24,10 @@ const STOP_PHASE_ENTER_DISTANCE_METERS = 25;
 const STOP_PHASE_EXIT_DISTANCE_METERS = 30;
 const STOP_CONFIRM_MAX_SPEED_KMH = 0.5;
 const EARTH_RADIUS_METERS = 6371000;
+const AVERAGE_CONSUMPTION_MIN_DISTANCE_KM = 0.2;
+const AVERAGE_CONSUMPTION_MAX_TIME_STEP_SECONDS = 5;
+const AVERAGE_CONSUMPTION_STALE_REAL_MS = 5000;
+const AVERAGE_CONSUMPTION_MAX_ABSOLUTE_KWH_PER_100_KM = 500;
 
 function asNumber(value) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -75,15 +85,37 @@ function secondsFromValue(value) {
   return undefined;
 }
 
-function formatClock(value) {
+function formatClock(value, includeSeconds = false) {
   if (typeof value === "string") {
-    const match = value.match(/(?:^|\s|T)(\d{1,2}):(\d{2})(?::\d{2}(?:\.\d+)?)?/);
-    if (match) return `${pad2(Number(match[1]))}:${match[2]}`;
+    const match = value.match(/(?:^|\s|T)(\d{1,2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?/);
+    if (match) {
+      const base = `${pad2(Number(match[1]))}:${match[2]}`;
+      return !includeSeconds || match[3] === undefined ? base : `${base}:${match[3]}`;
+    }
+    const theBusDateTime = value.trim().match(
+      /^\d{4}\.\d{2}\.\d{2}-(\d{1,2})\.(\d{2})(?:\.(\d{2}))?/
+    );
+    if (theBusDateTime) {
+      const base = `${pad2(Number(theBusDateTime[1]))}:${theBusDateTime[2]}`;
+      return !includeSeconds || theBusDateTime[3] === undefined
+        ? base
+        : `${base}:${theBusDateTime[3]}`;
+    }
+  }
+  if (value && typeof value === "object") {
+    const hours = asNumber(value.Hours ?? value.hours);
+    const minutes = asNumber(value.Minutes ?? value.minutes);
+    const seconds = asNumber(value.Seconds ?? value.seconds);
+    if (hours !== undefined || minutes !== undefined || seconds !== undefined) {
+      const base = `${pad2(hours ?? 0)}:${pad2(minutes ?? 0)}`;
+      return !includeSeconds || seconds === undefined ? base : `${base}:${pad2(seconds)}`;
+    }
   }
   const seconds = secondsFromValue(value);
-  if (seconds === undefined) return "--:--";
+  if (seconds === undefined) return includeSeconds ? "--:--:--" : "--:--";
   const daySeconds = ((Math.trunc(seconds) % 86400) + 86400) % 86400;
-  return `${pad2(Math.floor(daySeconds / 3600))}:${pad2(Math.floor((daySeconds % 3600) / 60))}`;
+  const base = `${pad2(Math.floor(daySeconds / 3600))}:${pad2(Math.floor((daySeconds % 3600) / 60))}`;
+  return includeSeconds ? `${base}:${pad2(daySeconds % 60)}` : base;
 }
 
 function deltaSeconds(value) {
@@ -110,11 +142,11 @@ function formatDelta(seconds) {
   return `${sign}${Math.floor(absolute / 60)}:${pad2(absolute % 60)}`;
 }
 
-function scheduleStatus(seconds) {
-  if (seconds === undefined) return "UNBEKANNT";
-  if (seconds > PUNCTUAL_TOLERANCE_SECONDS) return "VERFRÜHT";
-  if (seconds < -PUNCTUAL_TOLERANCE_SECONDS) return "VERSPÄTET";
-  return "PÜNKTLICH";
+function scheduleStatus(seconds, language) {
+  if (seconds === undefined) return translateUi("unknown", language);
+  if (seconds > PUNCTUAL_TOLERANCE_SECONDS) return translateUi("early", language);
+  if (seconds < -PUNCTUAL_TOLERANCE_SECONDS) return translateUi("late", language);
+  return translateUi("punctual", language);
 }
 
 function timePoint(value) {
@@ -132,6 +164,25 @@ function timePoint(value) {
           Number(dateTime[4]),
           Number(dateTime[5]),
           Number(dateTime[6] ?? 0),
+        ) / 1000;
+      if (Number.isFinite(seconds)) return { seconds, hasDate: true };
+    }
+
+    // The Bus liefert Missionszeiten live auch als
+    // "YYYY.MM.DD-HH.MM.SS". Dieses Format ist datiert und darf nicht wie
+    // eine unbekannte Uhrzeit verworfen werden.
+    const theBusDateTime = trimmed.match(
+      /^(\d{4})\.(\d{2})\.(\d{2})-(\d{1,2})\.(\d{2})(?:\.(\d{2}))?/
+    );
+    if (theBusDateTime) {
+      const seconds =
+        Date.UTC(
+          Number(theBusDateTime[1]),
+          Number(theBusDateTime[2]) - 1,
+          Number(theBusDateTime[3]),
+          Number(theBusDateTime[4]),
+          Number(theBusDateTime[5]),
+          Number(theBusDateTime[6] ?? 0),
         ) / 1000;
       if (Number.isFinite(seconds)) return { seconds, hasDate: true };
     }
@@ -177,9 +228,16 @@ export function scheduleDifferenceSeconds(actualValue, plannedValue) {
 }
 
 function latLon(value) {
-  if (!Array.isArray(value) || value.length < 2) return undefined;
-  const latitude = asNumber(value[0]);
-  const longitude = asNumber(value[1]);
+  const latitude = Array.isArray(value)
+    ? asNumber(value[0])
+    : value && typeof value === "object"
+      ? asNumber(value.Y ?? value.Latitude)
+      : undefined;
+  const longitude = Array.isArray(value)
+    ? asNumber(value[1])
+    : value && typeof value === "object"
+      ? asNumber(value.X ?? value.Longitude)
+      : undefined;
   if (
     latitude === undefined
     || longitude === undefined
@@ -591,7 +649,60 @@ function normalizedStopName(stop) {
   return name === undefined ? "" : String(name).trim().toLowerCase();
 }
 
+function matchingMissionStopIndex(mission, liveStop) {
+  if (!usableStop(liveStop)) return -1;
+  const stops = Array.isArray(mission?.Stops) ? mission.Stops : [];
+  const liveName = normalizedStopName(liveStop);
+  const liveArrival = firstValue(liveStop, [
+    ["PlannedArrivalTime"],
+    ["ArrivalTime"],
+  ]);
+  const liveDeparture = firstValue(liveStop, [
+    ["PlannedDepartureTime"],
+    ["DepartureTime"],
+  ]);
+  const liveLocation = latLon(liveStop?.GeoLocation);
+
+  const candidates = stops
+    .map((stop, index) => ({ stop, index }))
+    .filter(({ stop }) => normalizedStopName(stop) === liveName);
+  if (candidates.length === 0) return -1;
+  if (candidates.length === 1) return candidates[0].index;
+
+  const timeCandidates = liveArrival !== undefined || liveDeparture !== undefined
+    ? candidates.filter(({ stop }) => (
+        (liveArrival === undefined || firstValue(stop, [
+          ["PlannedArrivalTime"],
+          ["ArrivalTime"],
+        ]) === liveArrival)
+        && (liveDeparture === undefined || firstValue(stop, [
+          ["PlannedDepartureTime"],
+          ["DepartureTime"],
+        ]) === liveDeparture)
+      ))
+    : [];
+  if (timeCandidates.length === 1) return timeCandidates[0].index;
+
+  if (liveLocation) {
+    const locationCandidates = (
+      timeCandidates.length > 0 ? timeCandidates : candidates
+    ).filter(({ stop }) => {
+      const location = latLon(stop?.GeoLocation);
+      return location && metersBetween(liveLocation, location) < 1;
+    });
+    if (locationCandidates.length === 1) return locationCandidates[0].index;
+  }
+
+  // Gleichnamige Halte ohne eindeutige Zeit oder Position bleiben
+  // absichtlich unaufgeloest; erst dann darf der numerische Legacy-Index als
+  // Fallback verwendet werden.
+  return -1;
+}
+
 function plannedStopFor(mission, liveStop, indexKey) {
+  const matchedIndex = matchingMissionStopIndex(mission, liveStop);
+  if (matchedIndex >= 0) return mission.Stops[matchedIndex];
+
   const indexed = indexedStop(mission, indexKey);
   if (indexed) return indexed;
 
@@ -612,14 +723,16 @@ function missionStop(mission) {
   return undefined;
 }
 
-function stopName(mission, stop) {
+function stopName(mission, stop, language) {
   const direct = firstValue(stop, [["StopName"], ["GroupName"], ["Name"]]);
   if (direct !== undefined) return String(direct);
   const current = mission?.CurrentStop;
   if (typeof current === "string" && current.trim() !== "") return current;
   const next = mission?.NextStop;
   if (typeof next === "string" && next.trim() !== "") return next;
-  return mission ? "-- KEINE HALTESTELLE --" : "-- KEINE MISSION --";
+  return mission
+    ? translateUi("no_stop", language)
+    : translateUi("no_mission", language);
 }
 
 function buttonByName(vehicle, name) {
@@ -662,15 +775,18 @@ function formatMechanicalKneeling(
   targetLowered,
   vehicle,
   vehicleReady,
+  language,
 ) {
   if (!vehicleReady) return "–";
-  if (targetLowered === true) return "SENKT AB";
-  if (targetLowered === false) return "HEBT AN";
-  if (mechanicalState === true) return "AKTIV";
+  if (targetLowered === true) return translateUi("lowering", language);
+  if (targetLowered === false) return translateUi("raising", language);
+  if (mechanicalState === true) return translateUi("active", language);
   if (mechanicalState !== false) return "–";
 
   const speed = asNumber(vehicle?.Speed);
-  return speed !== undefined && Math.abs(speed) === 0 ? "READY" : "AUS";
+  return speed !== undefined && Math.abs(speed) === 0
+    ? translateUi("ready", language)
+    : translateUi("off", language);
 }
 
 /**
@@ -678,19 +794,224 @@ function formatMechanicalKneeling(
  * Fahrzeuganzeige wird dieser echte Telemetriewert mit einer Nachkommastelle
  * in kW und deutschem Dezimalkomma dargestellt.
  */
-export function formatVehiclePower(value, vehicleReady = true) {
+export function formatVehiclePower(
+  value,
+  vehicleReady = true,
+  language = getDisplayLanguage(),
+) {
   if (!vehicleReady) return "–";
   const megawatts = asNumber(value);
   if (megawatts === undefined) return "–";
 
   const deciKilowatts = Math.round(megawatts * 10_000);
-  if (deciKilowatts === 0) return "0,0 kW";
+  if (deciKilowatts === 0) return `${formatUiDecimal(0, 1, language)} kW`;
 
   const sign = deciKilowatts > 0 ? "+" : "−";
-  const absoluteKilowatts = (Math.abs(deciKilowatts) / 10)
-    .toFixed(1)
-    .replace(".", ",");
+  const absoluteKilowatts = formatUiDecimal(
+    Math.abs(deciKilowatts) / 10,
+    1,
+    language,
+  );
   return `${sign}${absoluteKilowatts} kW`;
+}
+
+function formatAverageConsumption(
+  value,
+  vehicleReady = true,
+  language = getDisplayLanguage(),
+) {
+  if (!vehicleReady) return "–";
+  const consumption = asNumber(value);
+  if (consumption === undefined) return "–";
+
+  const deciConsumption = Math.round(consumption * 10);
+  if (deciConsumption === 0) {
+    return `${formatUiDecimal(0, 1, language)} kWh/100 km`;
+  }
+
+  const sign = deciConsumption < 0 ? "−" : "";
+  const absoluteConsumption = formatUiDecimal(
+    Math.abs(deciConsumption) / 10,
+    1,
+    language,
+  );
+  return `${sign}${absoluteConsumption} kWh/100 km`;
+}
+
+function electricEnergyTelemetry(vehicle, vehicleId) {
+  if (!vehicle || typeof vehicle !== "object") return undefined;
+  const identity = `${vehicle.VehicleModel ?? ""} ${vehicleId ?? ""}`.toLowerCase();
+  if (!/(?:ecitybus|ecitaro|electric|e[-_ ]?bus)/.test(identity)) return undefined;
+
+  const currentEnergy = asNumber(vehicle.CurrentFuel);
+  const maxEnergy = asNumber(vehicle.MaxFuel);
+  const displayEnergy = asNumber(vehicle.DisplayFuel);
+  if (
+    currentEnergy === undefined
+    || maxEnergy === undefined
+    || displayEnergy === undefined
+    || maxEnergy <= 0
+    || currentEnergy < 0
+    || currentEnergy > maxEnergy * 1.01
+    || displayEnergy < 0
+    || displayEnergy > 1.01
+  ) {
+    return undefined;
+  }
+
+  // Beim live geprueften eBus 2.2 entspricht CurrentFuel / MaxFuel exakt
+  // DisplayFuel. Nur diese gegenseitige Bestaetigung erlaubt, CurrentFuel als
+  // verbleibenden Energiespeicher fuer eine streckenbezogene Verbrauchsbildung zu
+  // verwenden. Diesel-/Kraftstoffwerte werden durch die Fahrzeugidentitaet
+  // ausgeschlossen.
+  if (Math.abs(currentEnergy / maxEnergy - displayEnergy) > 0.005) {
+    return undefined;
+  }
+
+  return { currentEnergy, maxEnergy };
+}
+
+export function supportsAverageVehicleConsumption(vehicle, vehicleId) {
+  return electricEnergyTelemetry(vehicle, vehicleId) !== undefined;
+}
+
+/**
+ * Ermittelt den Fahrtverbrauch wie ein Bordcomputer aus der bestaetigten
+ * Aenderung des eBus-Energiespeichers und der tatsaechlich gefahrenen Strecke.
+ * Die Strecke wird aus offizieller Geschwindigkeit und fortlaufender Spielzeit
+ * integriert. Sinkende Energie ergibt positiven Verbrauch; eine echte
+ * Nettozunahme durch Rekuperation kann einen negativen Fahrtwert ergeben.
+ *
+ * Das Ergebnis ist ein seit Messbeginn gebildeter Durchschnitt in kWh/100 km
+ * und niemals Ersatz fuer das direkte Powermeter. Nach der Lernphase bleibt
+ * der letzte bestaetigte Fahrt-Durchschnitt bei Stillstand und pausierter
+ * Spielzeit sowie ueber einzelne unvollstaendige API-Proben sichtbar.
+ * Bestaetigtes Verlassen des Busses, Fahrzeugwechsel und unplausible
+ * Ergebnisse setzen die Messung dagegen weiterhin sicher zurueck.
+ */
+export class VehicleAverageConsumptionTracker {
+  constructor() {
+    this.reset();
+  }
+
+  reset() {
+    this.vehicleId = "";
+    this.startEnergy = undefined;
+    this.distanceKm = 0;
+    this.lastAverage = undefined;
+    this.lastGameSeconds = undefined;
+    this.lastSpeedKmh = undefined;
+    this.lastGameAdvanceObservedAt = undefined;
+  }
+
+  initialize(vehicleId, energy, gameSeconds, speedKmh, observedAt) {
+    this.vehicleId = vehicleId;
+    this.startEnergy = energy.currentEnergy;
+    this.distanceKm = 0;
+    this.lastGameSeconds = gameSeconds;
+    this.lastSpeedKmh = speedKmh;
+    this.lastGameAdvanceObservedAt = observedAt;
+  }
+
+  update(snapshot, observedAt = Date.now()) {
+    const vehicle = snapshot?.vehicle;
+    const vehicleId = snapshot?.vehicleId ?? snapshot?.player?.CurrentVehicle ?? "";
+    const directPower = asNumber(vehicle?.Powermeter);
+    if (directPower !== undefined) {
+      this.reset();
+      return undefined;
+    }
+
+    const runtimeState = snapshot?.runtimeState;
+    const vehicleReady = snapshot?.vehicleReady === true
+      || runtimeState === "bus-ready"
+      || runtimeState === "mission-ready";
+    const energy = electricEnergyTelemetry(vehicle, vehicleId);
+    const gameTime = timePoint(snapshot?.world?.DateTime);
+    const speedKmh = asNumber(vehicle?.Speed);
+
+    if (runtimeState === "no-bus") {
+      this.reset();
+      return undefined;
+    }
+
+    if (vehicleId && this.vehicleId && vehicleId !== this.vehicleId) {
+      this.reset();
+      if (vehicleReady && energy && gameTime && speedKmh !== undefined && speedKmh >= 0) {
+        this.initialize(vehicleId, energy, gameTime.seconds, speedKmh, observedAt);
+      }
+      return undefined;
+    }
+
+    if (
+      !vehicleReady
+      || !vehicleId
+      || !energy
+      || !gameTime
+      || speedKmh === undefined
+      || speedKmh < 0
+    ) {
+      // Einzelne Fahrzeugantworten koennen waehrend Halten, Missionswechseln
+      // oder kurzen API-Luecken unvollstaendig sein. Das ist weder ein
+      // Fahrzeugwechsel noch ein manueller Reset. Der letzte bestaetigte
+      // Fahrtwert bleibt deshalb intern erhalten und wird bei der naechsten
+      // vollstaendigen Probe fortgesetzt beziehungsweise sicher neu verankert.
+      return this.lastAverage;
+    }
+
+    if (!this.vehicleId) {
+      this.initialize(vehicleId, energy, gameTime.seconds, speedKmh, observedAt);
+      return undefined;
+    }
+
+    const gameSeconds = gameTime.seconds;
+    if (this.lastGameSeconds === undefined || this.lastSpeedKmh === undefined) {
+      this.initialize(vehicleId, energy, gameSeconds, speedKmh, observedAt);
+      return undefined;
+    }
+
+    const elapsedSeconds = gameSeconds - this.lastGameSeconds;
+    if (
+      elapsedSeconds < 0
+      || elapsedSeconds > AVERAGE_CONSUMPTION_MAX_TIME_STEP_SECONDS
+    ) {
+      const heldAverage = this.lastAverage;
+      this.initialize(vehicleId, energy, gameSeconds, speedKmh, observedAt);
+      this.lastAverage = heldAverage;
+      return heldAverage;
+    }
+
+    if (elapsedSeconds > 0) {
+      const averageSpeedKmh = (this.lastSpeedKmh + speedKmh) / 2;
+      this.distanceKm += averageSpeedKmh * elapsedSeconds / 3600;
+      this.lastGameSeconds = gameSeconds;
+      this.lastSpeedKmh = speedKmh;
+      this.lastGameAdvanceObservedAt = observedAt;
+    }
+
+    if (
+      this.lastGameAdvanceObservedAt === undefined
+      || observedAt - this.lastGameAdvanceObservedAt > AVERAGE_CONSUMPTION_STALE_REAL_MS
+      || this.startEnergy === undefined
+      || this.distanceKm < AVERAGE_CONSUMPTION_MIN_DISTANCE_KM
+    ) {
+      return this.lastAverage;
+    }
+
+    const consumption = -(energy.currentEnergy - this.startEnergy)
+      / this.distanceKm
+      * 100;
+    if (
+      !Number.isFinite(consumption)
+      || Math.abs(consumption) > AVERAGE_CONSUMPTION_MAX_ABSOLUTE_KWH_PER_100_KM
+    ) {
+      this.initialize(vehicleId, energy, gameSeconds, speedKmh, observedAt);
+      return undefined;
+    }
+
+    this.lastAverage = consumption;
+    return this.lastAverage;
+  }
 }
 
 function stopRequested(vehicle) {
@@ -891,6 +1212,9 @@ function plannedDisplayedStop(mission, displayedStop) {
 
 function stopIndexFor(mission, stop, indexKey) {
   const stops = Array.isArray(mission?.Stops) ? mission.Stops : [];
+  const matchedIndex = matchingMissionStopIndex(mission, stop);
+  if (matchedIndex >= 0) return matchedIndex;
+
   const indexValue = asNumber(mission?.[indexKey]);
   if (indexValue !== undefined) {
     const index = Math.trunc(indexValue);
@@ -1412,6 +1736,9 @@ export function reachedStopIdentity(mission) {
 }
 
 export function createViewModel(snapshot, previousDelta, scheduleState = {}) {
+  const language = normalizeDisplayLanguage(
+    scheduleState.language ?? getDisplayLanguage(),
+  );
   const player = snapshot?.player;
   const vehicle = snapshot?.vehicle;
   const mission = snapshot?.mission;
@@ -1448,7 +1775,7 @@ export function createViewModel(snapshot, previousDelta, scheduleState = {}) {
     scheduleState,
   );
   const delta = deltaState.seconds;
-  const status = scheduleStatus(delta);
+  const status = scheduleStatus(delta, language);
   const displayFuel = asNumber(vehicle?.DisplayFuel);
   const speed = Math.max(0, Math.round(asNumber(vehicle?.Speed) ?? 0));
   const allowedSpeed = Math.max(
@@ -1475,43 +1802,67 @@ export function createViewModel(snapshot, previousDelta, scheduleState = {}) {
   const mechanicalKneeling = typeof scheduleState.mechanicalKneeling === "boolean"
     ? scheduleState.mechanicalKneeling
     : normalizeMechanicalKneeling(buttonByName(vehicle, "Kneeling")?.State);
+  const directPowerAvailable = asNumber(vehicle?.Powermeter) !== undefined;
+  const averageConsumption = asNumber(scheduleState.averageConsumptionKwhPer100Km);
+  const averageConsumptionSupported = supportsAverageVehicleConsumption(
+    vehicle,
+    snapshot?.vehicleId ?? player?.CurrentVehicle,
+  );
+  const powerSource = directPowerAvailable
+    ? "direct"
+    : averageConsumption !== undefined
+      ? "average-consumption"
+      : averageConsumptionSupported
+        ? "average-consumption-pending"
+        : "unavailable";
 
   return {
+    language,
     online,
     inVehicle,
     runtimeState,
     connectionLabel: runtimeState === "offline"
-      ? "OFFLINE"
+      ? translateUi("offline", language)
       : runtimeState === "no-bus"
-        ? "NICHT IM BUS"
+        ? translateUi("no_bus", language)
         : runtimeState === "bus-not-ready"
-          ? "KEINE DATEN"
-          : "LIVE",
-    stopName: stopName(mission, stop),
+          ? translateUi("no_data", language)
+          : translateUi("live", language),
+    stopName: stopName(mission, stop, language),
     arrival: formatClock(firstValue(arrivalStop, [["ArrivalTime"], ["PlannedArrivalTime"]])),
     departure: formatClock(firstValue(departureStop, [["DepartureTime"], ["PlannedDepartureTime"]])),
     deltaText: formatDelta(delta),
     deltaSeconds: delta,
     deltaSource: deltaState.source,
     status,
-    ingameTime: formatClock(gameTime(world, player, vehicle, mission)),
+    ingameTime: formatClock(gameTime(world, player, vehicle, mission), true),
     stopRequest: stopRequested(vehicle),
     speed,
     allowedSpeed,
     speedOverLimit,
     speedLevel,
     gear: gear == null || gear === "" ? "–" : String(gear).slice(0, 1).toUpperCase(),
-    batteryPercent: displayFuel === undefined ? undefined : Math.max(0, Math.min(100, Math.round(displayFuel * 100))),
-    doors: doorsOpen(vehicle) ? "OFFEN" : inVehicle ? "ZU" : "–",
-    parkingBrake: asBoolean(vehicle?.FixingBrake) ? "AN" : inVehicle ? "AUS" : "–",
+    batteryPercent: displayFuel === undefined
+      ? undefined
+      : Math.round(Math.max(0, Math.min(1, displayFuel)) * 1_000) / 10,
+    doors: doorsOpen(vehicle)
+      ? translateUi("open", language)
+      : inVehicle ? translateUi("closed", language) : "–",
+    parkingBrake: asBoolean(vehicle?.FixingBrake)
+      ? translateUi("on", language)
+      : inVehicle ? translateUi("off", language) : "–",
     autoKneeling,
     mechanicalKneeling: formatMechanicalKneeling(
       mechanicalKneeling,
       scheduleState.kneelingTargetLowered,
       vehicle,
       vehicleReady,
+      language,
     ),
-    power: formatVehiclePower(vehicle?.Powermeter, vehicleReady),
+    power: directPowerAvailable
+      ? formatVehiclePower(vehicle?.Powermeter, vehicleReady, language)
+      : formatAverageConsumption(averageConsumption, vehicleReady, language),
+    powerSource,
   };
 }
 

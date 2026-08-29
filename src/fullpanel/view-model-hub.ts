@@ -9,7 +9,8 @@ import {
   calculateStopPhaseDelta,
   createViewModel,
   missionIdentity,
-  reachedStopIdentity
+  reachedStopIdentity,
+  VehicleAverageConsumptionTracker
 } from "./view-model";
 import { FullpanelViewModel } from "./types";
 
@@ -51,9 +52,25 @@ export class FullpanelViewModelHub {
   private lastReachedStopIdentity = "";
   private reachedStopTrackingInitialized = false;
   private readonly kneelingMotion = new KneelingMotionTracker();
+  private readonly averageConsumption = new VehicleAverageConsumptionTracker();
   private trackedVehicleId: string | undefined;
 
   private constructor() {}
+
+  /**
+   * Haelt die gemeinsame Auswertung unabhaengig von sichtbaren Stream-Deck-
+   * Seiten aktiv. Dadurch bleibt insbesondere der Fahrtverbrauch lueckenlos,
+   * wenn voruebergehend keine Fullpanel- oder Fahrzeuganzeige sichtbar ist.
+   */
+  start(): void {
+    if (this.unsubscribeTelemetry) {
+      return;
+    }
+
+    this.unsubscribeTelemetry = this.telemetry.subscribe((snapshot) => {
+      this.publish(snapshot);
+    });
+  }
 
   get snapshot(): TelemetrySnapshot {
     return this.snapshotValue;
@@ -63,14 +80,28 @@ export class FullpanelViewModelHub {
     return this.viewModelValue;
   }
 
-  subscribe(listener: ViewModelListener): () => void {
-    this.listeners.add(listener);
+  /**
+   * Startet ausschliesslich die lokal berechnete Fahrtverbrauchsmessung neu.
+   * Ein echtes Powermeter und andere Fahrzeuganzeigen bleiben unveraendert.
+   */
+  resetAverageConsumption(): boolean {
+    if (
+      this.viewModelValue.powerSource !== "average-consumption"
+      && this.viewModelValue.powerSource !== "average-consumption-pending"
+    ) {
+      return false;
+    }
 
-    if (!this.unsubscribeTelemetry) {
-      this.unsubscribeTelemetry = this.telemetry.subscribe((snapshot) => {
-        this.publish(snapshot);
-      });
-    } else {
+    this.averageConsumption.reset();
+    this.publish(this.snapshotValue);
+    return true;
+  }
+
+  subscribe(listener: ViewModelListener): () => void {
+    const alreadyStarted = this.unsubscribeTelemetry !== undefined;
+    this.listeners.add(listener);
+    this.start();
+    if (alreadyStarted) {
       listener(this.snapshotValue, this.viewModelValue);
     }
 
@@ -82,11 +113,6 @@ export class FullpanelViewModelHub {
 
       active = false;
       this.listeners.delete(listener);
-
-      if (this.listeners.size === 0) {
-        this.unsubscribeTelemetry?.();
-        this.unsubscribeTelemetry = undefined;
-      }
     };
   }
 
@@ -95,6 +121,7 @@ export class FullpanelViewModelHub {
     this.unsubscribeTelemetry = undefined;
     this.listeners.clear();
     this.kneelingMotion.stop();
+    this.averageConsumption.reset();
     this.trackedVehicleId = undefined;
     this.resetScheduleState();
   }
@@ -143,6 +170,7 @@ export class FullpanelViewModelHub {
       let autoKneeling: boolean | undefined;
       let mechanicalKneeling: boolean | undefined;
       let kneelingTargetLowered: boolean | undefined;
+      const averageConsumptionKwhPer100Km = this.averageConsumption.update(snapshot);
 
       if (!connected || !vehicleId || !snapshot.vehicle) {
         this.kneelingMotion.stop();
@@ -174,7 +202,8 @@ export class FullpanelViewModelHub {
         departureStop: stopPhase.departureStop,
         autoKneeling,
         mechanicalKneeling,
-        kneelingTargetLowered
+        kneelingTargetLowered,
+        averageConsumptionKwhPer100Km
       }) as FullpanelViewModel;
 
       if (

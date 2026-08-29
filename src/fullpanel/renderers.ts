@@ -1,4 +1,5 @@
 // @ts-nocheck -- getestete 2.13.0.27-SVG-Renderer, unverändert migriert.
+import { formatUiDecimal, translateUi } from "../core/localization";
 const COLORS = Object.freeze({
   green: "#78d83a",
   greenValue: "#7edb3f",
@@ -20,10 +21,17 @@ const escapeXml = (value) => String(value ?? "--")
 const asDataUri = (svg) =>
   `data:image/svg+xml;base64,${Buffer.from(svg, "utf8").toString("base64")}`;
 
+export function formatBatteryPercent(value, language = "de") {
+  const percent = Number(value);
+  if (!Number.isFinite(percent)) return "--";
+  return `${formatUiDecimal(Math.max(0, Math.min(100, percent)), 1, language)}%`;
+}
+
 export function timetablePalette(view) {
-  const late = view?.status === "VERSPÄTET";
-  const early = view?.status === "VERFRÜHT";
-  const unknown = view?.status === "UNBEKANNT";
+  const language = view?.language ?? "de";
+  const late = view?.status === translateUi("late", language);
+  const early = view?.status === translateUi("early", language);
+  const unknown = view?.status === translateUi("unknown", language);
   const offline = view?.runtimeState === "offline";
   const noBus = view?.runtimeState === "no-bus"
     || view?.runtimeState === "bus-not-ready";
@@ -87,7 +95,7 @@ function singleFrame(content, palette) {
   <rect x="3" y="3" width="194" height="94" rx="10" fill="${palette.tint}" stroke="${palette.accent}" stroke-width="2" filter="url(#panel)"/>
   <rect x="6" y="6" width="188" height="88" rx="8" fill="#020604" fill-opacity=".72" stroke="#fff" stroke-opacity=".05"/>
   ${content}
-  <text x="192" y="94" text-anchor="end" font-family="Arial,Helvetica,sans-serif" font-size="4.5" font-weight="700" fill="#fff" fill-opacity=".25">2.15 BETA</text>
+  <text x="192" y="94" text-anchor="end" font-family="Arial,Helvetica,sans-serif" font-size="4.5" font-weight="700" fill="#fff" fill-opacity=".25">2.16</text>
   </svg>`;
 }
 
@@ -114,6 +122,7 @@ function fittedStopName(value) {
 }
 
 function stopPanel(view, palette, bright) {
+  const language = view?.language ?? "de";
   const metrics = fittedStopName(view?.stopName);
   const stopRequested = Boolean(view?.stopRequest);
   const fit = metrics.fitted
@@ -126,7 +135,7 @@ function stopPanel(view, palette, bright) {
     </g>`
     : "";
 
-  return `<text x="100" y="19" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="7" font-weight="800" letter-spacing=".4" fill="${palette.route}">NÄCHSTE HALTESTELLE</text>
+  return `<text x="100" y="19" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="7" font-weight="800" letter-spacing=".4" fill="${palette.route}">${translateUi("next_stop", language)}</text>
   <text x="100" y="54" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="${metrics.fontSize}" font-weight="800" fill="#fff"${fit}>${escapeXml(metrics.text)}</text>
   ${stopBar}`;
 }
@@ -136,25 +145,26 @@ function metricPanel(label, value, valueColor, palette, fontSize = 37) {
   <text x="100" y="73" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="${fontSize}" font-weight="850" fill="${valueColor}" filter="url(#soft)">${escapeXml(value)}</text>`;
 }
 
-function stopStatusPanel(palette, bright) {
+function stopStatusPanel(palette, bright, language = "de") {
   const fill = bright ? "#d8172b" : "#070304";
   const outline = bright ? "#ff4656" : "#a52634";
   const glow = bright ? "url(#stopBright)" : "url(#stopDim)";
   return `<g filter="${glow}">
     <path d="M22 32L35 20H165L178 32V76L165 88H35L22 76Z" fill="${fill}" stroke="${outline}" stroke-width="2.2"/>
-    <text x="100" y="43" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="8" font-weight="800" letter-spacing=".5" fill="#ff7782">HALTEWUNSCH</text>
+    <text x="100" y="43" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="8" font-weight="800" letter-spacing=".5" fill="#ff7782">${translateUi("stop_request", language)}</text>
     <text x="100" y="76" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="34" font-weight="900" fill="#fff">STOP</text>
   </g>`;
 }
 
 export function renderSinglePanel(view, kind, bright = false) {
+  const language = view?.language ?? "de";
   const palette = timetablePalette(view);
   if (view?.runtimeState === "offline") {
     const content = `<path d="M52 42H148M52 52H148M52 62H148" stroke="#717985" stroke-width="4" stroke-linecap="round" opacity=".25"/>
-    <text x="100" y="58" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="900" letter-spacing="2" fill="#d2d6dc">OFFLINE</text>`;
+    <text x="100" y="58" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="23" font-weight="900" letter-spacing="2" fill="#d2d6dc">${translateUi("offline", language)}</text>`;
     return asDataUri(singleFrame(content, palette));
   }
-  const live = view?.connectionLabel === "LIVE";
+  const live = view?.runtimeState === "bus-ready" || view?.runtimeState === "mission-ready";
   let content;
 
   switch (kind) {
@@ -162,23 +172,23 @@ export function renderSinglePanel(view, kind, bright = false) {
       content = stopPanel(view, palette, bright);
       break;
     case "arrival":
-      content = metricPanel("ANKUNFT", live ? view?.arrival : "--:--", COLORS.white, palette);
+      content = metricPanel(translateUi("arrival", language), live ? view?.arrival : "--:--", COLORS.white, palette);
       break;
     case "departure":
-      content = metricPanel("ABFAHRT", live ? view?.departure : "--:--", COLORS.white, palette);
+      content = metricPanel(translateUi("departure", language), live ? view?.departure : "--:--", COLORS.white, palette);
       break;
     case "delta":
-      content = metricPanel("ABWEICHUNG", live ? view?.deltaText : "--:--", palette.delta, palette, 34);
+      content = metricPanel(translateUi("deviation", language), live ? view?.deltaText : "--:--", palette.delta, palette, 34);
       break;
     case "ingame":
-      content = metricPanel("INGAME-ZEIT", live ? view?.ingameTime : "--:--", COLORS.white, palette);
+      content = metricPanel(translateUi("ingame_time", language), live ? view?.ingameTime : "--:--:--", COLORS.white, palette, 30);
       break;
     case "status":
       content = view?.stopRequest
-        ? stopStatusPanel(palette, bright)
+        ? stopStatusPanel(palette, bright, language)
         : metricPanel(
-          "STATUS",
-          live ? view?.status : view?.connectionLabel ?? "OFFLINE",
+          translateUi("status", language),
+          live ? view?.status : view?.connectionLabel ?? translateUi("offline", language),
           palette.accent,
           palette,
           live && String(view?.status ?? "").length > 9 ? 24 : 28,
@@ -216,11 +226,12 @@ function vehicleUnavailableColor(view) {
 }
 
 export function renderKeypad(view, kind) {
-  const live = view?.connectionLabel === "LIVE";
+  const language = view?.language ?? "de";
+  const live = view?.runtimeState === "bus-ready" || view?.runtimeState === "mission-ready";
 
   if (view?.runtimeState === "offline") {
     const content = `<path d="M38 57H106M38 72H106M38 87H106" stroke="#717985" stroke-width="5" stroke-linecap="round" opacity=".35"/>
-    <text x="72" y="80" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="900" letter-spacing="1" fill="#d2d6dc">OFFLINE</text>`;
+    <text x="72" y="80" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="900" letter-spacing="1" fill="#d2d6dc">${translateUi("offline", language)}</text>`;
     return asDataUri(vehicleKeypadFrame(content, "#717985", "#5b6470"));
   }
 
@@ -242,15 +253,19 @@ export function renderKeypad(view, kind) {
   }
 
   if (kind === "power") {
+    const averageConsumption = view?.powerSource === "average-consumption"
+      || view?.powerSource === "average-consumption-pending";
     const match = live
-      ? String(view?.power ?? "").match(/^([+−-]?\d+(?:[,.]\d)?)\s*kW$/u)
+      ? String(view?.power ?? "").match(averageConsumption
+        ? /^([−-]?\d+(?:[,.]\d)?)\s*kWh\/100 km$/u
+        : /^([+−-]?\d+(?:[,.]\d)?)\s*kW$/u)
       : undefined;
-    const value = match?.[1]?.replace("-", "−").replace(".", ",") ?? "--";
+    const value = match?.[1]?.replace("-", "−") ?? "--";
     const accent = live && match ? COLORS.cyan : vehicleUnavailableColor(view);
     const valueColor = live && match ? COLORS.greenValue : COLORS.white;
     const fontSize = value.length >= 7 ? 35 : value.length >= 6 ? 40 : value.length >= 5 ? 45 : 54;
     const content = `<text x="72" y="88" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="${fontSize}" font-weight="900" fill="${valueColor}" filter="url(#keyGlow)">${escapeXml(value)}</text>
-    <text x="72" y="116" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="${live ? "#9ff2aa" : accent}">kW</text>`;
+    <text x="72" y="116" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="${averageConsumption ? 10 : 14}" font-weight="700" fill="${live ? "#9ff2aa" : accent}">${averageConsumption ? "Ø kWh/100 km" : "kW"}</text>`;
     return asDataUri(vehicleKeypadFrame(content, accent, valueColor));
   }
 
@@ -258,7 +273,7 @@ export function renderKeypad(view, kind) {
     const rawPercent = Number(view?.batteryPercent);
     const hasValue = live && Number.isFinite(rawPercent);
     const percent = hasValue
-      ? Math.max(0, Math.min(100, Math.round(rawPercent)))
+      ? Math.max(0, Math.min(100, rawPercent))
       : undefined;
     const valueColor = percent === undefined
       ? vehicleUnavailableColor(view)
@@ -268,7 +283,7 @@ export function renderKeypad(view, kind) {
           ? COLORS.yellow
           : COLORS.greenValue;
     const accent = hasValue ? COLORS.cyan : vehicleUnavailableColor(view);
-    const value = percent === undefined ? "--" : `${percent}%`;
+    const value = percent === undefined ? "--" : formatBatteryPercent(percent, language);
     const fillWidth = percent === undefined
       ? 0
       : Number((88 * percent / 100).toFixed(1));
@@ -298,7 +313,7 @@ function timetableKeypadFrame(content, palette) {
   <rect x="4" y="4" width="136" height="136" rx="19" fill="${palette.tint}" stroke="${palette.accent}" stroke-width="3" filter="url(#keyGlow)"/>
   <rect x="8" y="8" width="128" height="128" rx="16" fill="#020604" fill-opacity=".82" stroke="#fff" stroke-opacity=".07"/>
   ${content}
-  <text x="135" y="136" text-anchor="end" font-family="Arial,Helvetica,sans-serif" font-size="4" font-weight="700" fill="#fff" fill-opacity=".22">2.15 BETA</text>
+  <text x="135" y="136" text-anchor="end" font-family="Arial,Helvetica,sans-serif" font-size="4" font-weight="700" fill="#fff" fill-opacity=".22">2.16</text>
   </svg>`;
 }
 
@@ -332,6 +347,7 @@ function splitKeypadStopName(value) {
 }
 
 function keypadStopPanel(view, palette, bright) {
+  const language = view?.language ?? "de";
   const lines = splitKeypadStopName(view?.stopName);
   const requested = Boolean(view?.stopRequest);
   const maxUnits = Math.max(...lines.map(keypadTextUnits), 1);
@@ -358,7 +374,7 @@ function keypadStopPanel(view, palette, bright) {
     </g>`
     : "";
 
-  return `<text x="72" y="24" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="7" font-weight="800" letter-spacing=".4" fill="${palette.route}">NÄCHSTE HALTESTELLE</text>
+  return `<text x="72" y="24" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="7" font-weight="800" letter-spacing=".4" fill="${palette.route}">${translateUi("next_stop", language)}</text>
   ${text}
   ${stopBar}`;
 }
@@ -368,22 +384,23 @@ function keypadMetric(label, value, color, fontSize = 37) {
   <text x="72" y="92" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="${fontSize}" font-weight="900" fill="${color}" filter="url(#valueGlow)">${escapeXml(value)}</text>`;
 }
 
-function keypadStopStatus(bright) {
+function keypadStopStatus(bright, language = "de") {
   return `<g filter="${bright ? "url(#stopBright)" : "url(#stopDim)"}">
     <path d="M15 42L29 29H115L129 42V103L115 116H29L15 103Z" fill="${bright ? "#d8172b" : "#070304"}" stroke="${bright ? "#ff4656" : "#a52634"}" stroke-width="2.4"/>
-    <text x="72" y="57" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="7" font-weight="800" letter-spacing=".45" fill="#ff7782">HALTEWUNSCH</text>
+    <text x="72" y="57" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="7" font-weight="800" letter-spacing=".45" fill="#ff7782">${translateUi("stop_request", language)}</text>
     <text x="72" y="98" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="35" font-weight="900" fill="#fff">STOP</text>
   </g>`;
 }
 
 export function renderTimetableKeypad(view, kind, bright = false) {
+  const language = view?.language ?? "de";
   const palette = timetablePalette(view);
   if (view?.runtimeState === "offline") {
     const content = `<path d="M38 57H106M38 72H106M38 87H106" stroke="#717985" stroke-width="5" stroke-linecap="round" opacity=".35"/>
-    <text x="72" y="80" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="900" letter-spacing="1" fill="#d2d6dc">OFFLINE</text>`;
+    <text x="72" y="80" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="900" letter-spacing="1" fill="#d2d6dc">${translateUi("offline", language)}</text>`;
     return asDataUri(timetableKeypadFrame(content, palette));
   }
-  const live = view?.connectionLabel === "LIVE";
+  const live = view?.runtimeState === "bus-ready" || view?.runtimeState === "mission-ready";
   let content;
 
   switch (kind) {
@@ -391,23 +408,23 @@ export function renderTimetableKeypad(view, kind, bright = false) {
       content = keypadStopPanel(view, palette, bright);
       break;
     case "arrival":
-      content = keypadMetric("ANKUNFT", live ? view?.arrival : "--:--", COLORS.white);
+      content = keypadMetric(translateUi("arrival", language), live ? view?.arrival : "--:--", COLORS.white);
       break;
     case "departure":
-      content = keypadMetric("ABFAHRT", live ? view?.departure : "--:--", COLORS.white);
+      content = keypadMetric(translateUi("departure", language), live ? view?.departure : "--:--", COLORS.white);
       break;
     case "delta":
-      content = keypadMetric("ABWEICHUNG", live ? view?.deltaText : "--:--", palette.delta, 34);
+      content = keypadMetric(translateUi("deviation", language), live ? view?.deltaText : "--:--", palette.delta, 34);
       break;
     case "ingame":
-      content = keypadMetric("INGAME-ZEIT", live ? view?.ingameTime : "--:--", COLORS.white);
+      content = keypadMetric(translateUi("ingame_time", language), live ? view?.ingameTime : "--:--:--", COLORS.white, 27);
       break;
     case "status": {
-      const value = live ? view?.status : view?.connectionLabel ?? "OFFLINE";
+      const value = live ? view?.status : view?.connectionLabel ?? translateUi("offline", language);
       const fontSize = Math.max(17, Math.min(29, 116 / Math.max(keypadTextUnits(value), 1)));
       content = view?.stopRequest
-        ? keypadStopStatus(bright)
-        : keypadMetric("STATUS", value, palette.accent, Number(fontSize.toFixed(1)));
+        ? keypadStopStatus(bright, language)
+        : keypadMetric(translateUi("status", language), value, palette.accent, Number(fontSize.toFixed(1)));
       break;
     }
     default:

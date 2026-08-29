@@ -1,366 +1,246 @@
 # Rhao92's The Bus Stream Deck Plugin
 
-**Rhao92's The Bus Stream Deck Plugin** is a free community-made Elgato Stream
-Deck plugin for **The Bus by TML Studios**. It uses live game telemetry for
-vehicle controls, dynamic status feedback, timetable displays, full panels and
-experimental navigation. It works with physical Stream Deck hardware and
-Stream Deck Mobile on iPhone and iPad.
+Release: `2.16.0` · Installer build: `2.16.0.21`
 
-**Deutsch:** Rhao92's The Bus Stream Deck Plugin ist ein kostenloses
-Community-Plugin für **The Bus von TML Studios**. Es verbindet echte
-Live-Telemetrie mit Fahrzeugsteuerung, dynamischen Zustandsanzeigen,
-Fahrplaninformationen, Fullpanels und experimenteller Navigation für Elgato
-Stream Deck und Stream Deck Mobile.
+**Rhao92's The Bus Stream Deck Plugin** is a free, independent community-made
+Elgato Stream Deck plugin for **The Bus by TML Studios**. It uses official local
+game telemetry for vehicle controls, dynamic status feedback, timetable
+displays, full panels, and experimental navigation. It supports physical Stream
+Deck hardware and Stream Deck Mobile on iPhone and iPad.
 
-> **Public Beta `2.15.0.18`**
-> The current public beta is available on GitHub. Newer local changes remain
-> test-only until their practical checks and separate release approval.
+This project is not an official product of, affiliated with, or endorsed by TML
+Studios or Elgato.
 
-[Download Public Beta 2.15.0.18 (ZIP)](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/download/v2.15.0.18-beta/Rhao92-The-Bus-Telemetry-Interface-2.15.0.18-beta.zip)
-· [Release notes](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/tag/v2.15.0.18-beta)
-· [Report a bug](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/issues/new?template=bug_report.md)
-
-![Rhao92's The Bus Stream Deck Plugin showing live vehicle telemetry, timetable controls and navigation on Stream Deck](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/download/v2.15.0.18-beta/Preview.jpg)
-
-This is an independent community project by Rhao92. It is not an official
-product of, affiliated with or endorsed by TML Studios or Elgato.
+![Rhao92's The Bus Stream Deck Plugin showing live vehicle telemetry, timetable controls and navigation on Stream Deck](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/download/v2.16.0/Preview.jpg)
 
 [Deutsch](#deutsch) · [English](#english)
 
+---
+
 ## Deutsch
 
-### Status und Kompatibilität
+### Download
 
-Diese Version ist eine veröffentlichte öffentliche Beta mit 50
-telemetriebasierten Actions. Anzeigen ändern sich grundsätzlich
-erst nach bestätigter Rückmeldung aus dem Spiel; das Plugin simuliert keine
-Fahrzeugzustände.
-
-**Aktuell getestet wurde ausschließlich der MB eCitaro / MB eCityBus 18 Meter
-4-Türer.** Andere Busmodelle können funktionieren, sind bisher aber nicht
-offiziell getestet. Abweichende Telemetrie-, Tasten- oder Zustandsnamen können
-einzelne Anzeigen und Bedienfunktionen beeinflussen.
+- Installer: https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/download/v2.16.0/Rhao92-The-Bus-Stream-Deck-Plugin-2.16.0.21.zip
+- Release-Beschreibung: https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/tag/v2.16.0
+- Fehler melden: https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/issues/new?template=bug_report.md
+- Idee vorschlagen: https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/issues/new?template=feature_request.md
 
 ### Voraussetzungen
 
 - Windows 10 oder neuer
-- Elgato Stream Deck Software `7.2` oder neuer
+- Elgato Stream Deck Software 7.2 oder neuer
 - The Bus mit erreichbarer lokaler Telemetrie auf `127.0.0.1:37337`
-- Optional ein physisches Stream Deck; alternativ Stream Deck Mobile auf
-  iPhone oder iPad
-- Für Regler und Fullpanel ein Stream Deck +
+- physisches Stream Deck oder Stream Deck Mobile auf iPhone beziehungsweise iPad
+- Stream Deck + für Regler und Fullpanels
 
-### Download und Installation
+### Installation
 
-1. Die geprüfte
-   [Public Beta 2.15.0.18 als ZIP herunterladen](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/download/v2.15.0.18-beta/Rhao92-The-Bus-Telemetry-Interface-2.15.0.18-beta.zip).
-2. Das ZIP entpacken und die enthaltene Datei mit der Endung
-   `.streamDeckPlugin` doppelt anklicken.
+1. Den Installer über den oben angegebenen Downloadlink laden.
+2. Die Datei mit der Endung `.streamDeckPlugin` doppelt anklicken.
 3. Installation oder Update in der Stream-Deck-Software bestätigen.
 4. The Bus starten und einen Bus vollständig laden.
-5. Die gewünschten Actions auf das Stream Deck ziehen. Konfigurierbare
-   Actions werden im Property Inspector eingestellt.
+5. Gewünschte Actions auf das Stream Deck ziehen und konfigurierbare Actions im
+   Property Inspector einstellen.
 
-Das ZIP enthält außerdem `README.md`, `PATCHLOG.txt` und `ROADMAP.txt`. Die
-vollständige Beschreibung der Beta steht in den
-[Release Notes](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/tag/v2.15.0.18-beta).
+### Sprache
 
-Diese Beta verwendet die stabile Plugin-UUID
-`de.rhao92.thebus-telemetry-interface`. Beim Wechsel von `2.14.1` oder älter
-müssen Actions wegen der früheren Identität einmalig neu zugewiesen werden.
-Updates ab `2.15.0.17-beta` verwenden dieselbe Identität und verhalten sich wie
-normale Updates.
-
-### Live-Telemetrie und Fahrzeuganzeigen
-
-Geschwindigkeit, Tempolimit, Leistung, Akkustand, Gang, Zündung,
-Feststellbremse, Blinker und Warnblinker werden aus verfügbaren Spieldaten
-dargestellt. Die gemeinsame Statuslogik unterscheidet `OFFLINE`, `NO_BUS`,
-`BUS_NOT_READY`, `BUS_READY` und `MISSION_READY`.
-
-### Fahrzeugsteuerung
-
-Das The Bus Stream Deck Plugin bündelt unter anderem Gangwahl, Zündung,
-Feststellbremse, Blinker, Warnblinker, Scheibenwischer, Retarder,
-Sonnenblende, Außenbeleuchtung und Fahrgastraumlicht. Ein Tastendruck allein
-beweist keinen Zustand; die sichtbare Rückmeldung kommt aus dem Spiel.
-
-### Türen und Kneeling
-
-Enthalten sind Einzeltüren, Door All, Türfreigabe, automatisches Türschließen,
-Kneeling, Auto-Kneeling und Rollstuhlrampe. Door All unterscheidet geschlossen,
-offen, gemischt und Bewegung. Das normale Kneeling-Symbol folgt dem echten
-mechanischen Zustand.
-
-### Navigation
-
-Die experimentelle Navigation bietet Manöver, Manöverdistanz, nächsten Halt,
-Gesamt- und Reststrecke, Linienfortschritt, ETA, Prognose-Delta und
-Prognosesicherheit. Unsichere Routenzuordnungen oder Manöver bleiben neutral,
-anstatt eine Richtung zu raten.
-
-### Fullpanels und Statusanzeigen
-
-Fahrzeug-, Fahrplan- und Navigations-Fullpanels nutzen die vier
-Reglersegmente des Stream Deck + als zusammenhängende Ansicht. Ergänzend gibt
-es Keypad-Anzeigen und einzelne Regler für unterstützte Funktionen.
+Deutsch und Englisch sind in derselben Installation enthalten. Aktionsnamen,
+Beschreibungen, Property Inspectors und dynamische Anzeigen folgen automatisch
+der Sprache der Stream-Deck-Software. Deutsch dient als Rückfall für derzeit
+nicht unterstützte Sprachen. Der Sprachwechsel verändert keine UUIDs,
+Profilzuordnungen oder gespeicherten Auswahlen.
 
 ### Funktionsübersicht
 
-| Bereich | Enthaltene Funktionen |
+| Bereich | Funktionen |
 | --- | --- |
-| Navigation | Manöver, Manöverdistanz, nächster Halt, Gesamt-/Reststrecke, Linienfortschritt, ETA, Prognose-Delta und Prognosesicherheit in einer Dropdown-Action |
-| Fahrplan | Haltestelle, Ankunft, Abfahrt, Abweichung, Ingame-Zeit, Status und Haltewunsch für Keypad, Einzelpanel und Fullpanel |
-| Fahrzeug | Geschwindigkeit, Tempolimit, Leistung, durchgehende Akkuanzeige, Gang, Zündung, Feststellbremse, Blinker und Warnblinker |
-| Türen und Einstieg | Einzeltüren, Door-All, Türfreigabe, automatisches Türschließen, Kneeling, Auto-Kneeling und Rollstuhlrampe |
+| Navigation | Manöver, Manöverdistanz, nächster Halt, Linienlänge, Reststrecke, Linienfortschritt, ETA, Prognose-Abweichung und Prognosesicherheit |
+| Fahrplan | Haltestelle, Ankunft, Abfahrt, Abweichung, Ingame-Zeit mit Sekunden, Status und Haltewunsch auf Tasten, Einzelpanel und Fullpanel |
+| Fahrzeug | Geschwindigkeit, Tempolimit, Leistung oder Fahrtverbrauch, Akkustand, Gang, Zündung, Feststellbremse, Blinker und Warnblinker |
+| Türen und Einstieg | Einzeltüren, Door All, Türfreigabe, automatisches Türschließen, Kneeling, Auto-Kneeling und Rollstuhlrampe |
 | Klima | Klima Ein/Aus, Heizen/Kühlen, hintere Klima, Umluft, vordere Umluft, automatische Ventilation, Temperatur und Luftverteilung |
-| Licht | Fahrgastraumlicht Ein/Aus, dunkler und heller |
-| Laufzeitstatus | Zentrale Zustände `OFFLINE`, `NO_BUS`, `BUS_NOT_READY`, `BUS_READY` und `MISSION_READY` |
+| Licht und Fahrt | Außenbeleuchtung, Fahrgastraumlicht, Scheibenwischer, Retarder und Sonnenblende |
+| Laufzeitstatus | `OFFLINE`, `NO_BUS`, `BUS_NOT_READY`, `BUS_READY` und `MISSION_READY` |
 
-Die zentrale Statuslogik zeigt `OFFLINE` nur bei nicht erreichbarer
-Telemetrie. Ohne bestätigten Bus werden neutral graue `---`-/`--`-Zustände
-beziehungsweise „Nicht im Bus“ angezeigt. Auto-Kneeling erhält seinen
-Ready-Zustand erst nach vollständig bestätigtem Buskontext. Door-All
-unterscheidet geschlossen, offen und gemischt. Die Akkuanzeige füllt sich
-durchgehend statt in groben Segmenten.
+Anzeigen ändern sich nur nach bestätigter Rückmeldung aus dem Spiel. Unbekannte
+oder unsichere Zustände bleiben neutral.
 
-#### Navigationsdiagnose (`2.15.0.18-beta`)
+### Navigation
 
-Die sichtbare Action **„Navigation · Debug speichern“** sichert beim Drücken
-die zurückliegenden 60 Sekunden der Navigation als TXT. Der Ringpuffer läuft
-ab Pluginstart ausschließlich im Arbeitsspeicher; vorher wird nichts auf die
-Festplatte geschrieben. Die Datei enthält Telemetrie,
-Projektionskandidaten, Auswahl-/Verwerfungsgründe sowie nur die zu diesem
-Zeitfenster gehörenden Lane- und Polyline-Geometrien.
+Die experimentelle Navigation wertet bestätigte zusammenhängende Routenpfade
+aus und kann Manöver, Entfernung, nächsten Halt, Reststrecke,
+Linienfortschritt, ETA und Prognosewerte darstellen. Missionsmerkmale
+unterscheiden reguläre Halte, Endhalte und betriebliche Pausenpunkte. Bei
+widersprüchlicher oder unvollständiger Geometrie bleibt die Anzeige neutral,
+anstatt eine Richtung zu raten.
 
-Zielordner unter Windows:
+### Akku, Leistung und Fahrtverbrauch
+
+Der Akkustand wird mit einer Nachkommastelle dargestellt. Ein vorhandenes
+`Powermeter` bleibt die maßgebliche Leistungsquelle. Fehlt es bei einem
+bestätigten Elektrobus, kann nach mindestens 200 gefahrenen Metern ein mit `Ø`
+gekennzeichneter Fahrtverbrauch in `kWh/100 km` erscheinen. Grundlage sind die
+bestätigte Energieänderung, offizielle Geschwindigkeit und fortlaufende
+Spielzeit.
+
+Der Durchschnitt läuft ab Pluginstart über Halte, Stillstand und
+Stream-Deck-Seitenwechsel hinweg weiter. Ein Druck auf die bestehende
+Leistungs-/Verbrauchstaste startet nur diese lokale Messung neu und sendet
+keinen Spielbefehl.
+
+### Fullpanels und Stream Deck Mobile
+
+Fahrzeug-, Fahrplan- und Navigations-Fullpanels nutzen alle vier Reglersegmente
+des Stream Deck + als zusammenhängende Ansicht. Normale Keypad-Actions sind auf
+passenden Stream-Deck-Modellen sowie über Stream Deck Mobile verfügbar. Nicht
+jede Action ist für jeden Controller-Typ vorgesehen; die Stream-Deck-Software
+zeigt den benötigten Controller an.
+
+### Navigation diagnostizieren
+
+Die sichtbare Action **„Navigation · Debug speichern“** sichert nach Tastendruck
+die vorherigen rund 60 Sekunden als TXT. Der Ringpuffer läuft ausschließlich im
+Arbeitsspeicher; ohne Tastendruck wird keine Datei geschrieben.
+
+Windows-Zielordner:
 `Dokumente\Projekte\The Bus\NaviDebug`
 
-Nach dem verifizierten Export zeigt die Taste `PATH 60S`. Es gibt bewusst
-keinen stillen OneDrive- oder Pluginordner-Fallback. Kann genau
-dieser Ordner nicht beschrieben werden, zeigt die Taste stattdessen einen
-roten Pfad-/Schreibfehler.
+Bei einem Navigationsproblem bitte Busmodell, Linie/Route, Haltestelle oder
+Straßenabschnitt sowie die manuell erzeugte TXT im GitHub-Fehlerbericht nennen.
+Private Angaben vor dem Anhängen entfernen.
 
-### Unterstützte Stream-Deck-Bereiche
+### Kompatibilität und Grenzen
 
-- **Keypad:** Fahrzeug-, Tür-, Klima-, Fahrplan- und Navigationstasten auf
-  Stream-Deck-Modellen mit normalen LCD-Tasten.
-- **Stream Deck +:** Zusätzliche Einzelregler und Touchanzeige für Fahrplan,
-  Temperatur, Luftverteilung und – sofern der Bus Steuerevents liefert –
-  Lüftergeschwindigkeit.
-- **Stream Deck Mobile:** Keypad-Actions auf iPhone und iPad ohne zusätzliches
-  physisches Stream-Deck-Gerät.
-- **Fullpanel:** Vollbreitenansicht über alle vier Reglersegmente des Stream
-  Deck +.
+- Vollständig bestätigte Fahrzeugabdeckung besteht für den viertürigen
+  MB eCitaro / MB eCityBus 18 m.
+- Andere Fahrzeuge können abweichende Telemetrie-, Tasten- oder Zustandsnamen
+  verwenden; fehlende Werte bleiben neutral.
+- Navigation bleibt experimentell und kann bei unbekannter oder unvollständiger
+  Routengeometrie Werte bewusst ausblenden.
+- Lüftergeschwindigkeit ist am bestätigten Fahrzeug nur lesbar. Bedienung wird
+  nur aktiviert, wenn ein Bus echte passende Steuerevents liefert.
+- Ticketart, Preis, Zahlung, Rückgeld und Belegstatus sind nicht verfügbar,
+  solange `BusLogic.Sales` keine echten Werte liefert.
+- Ein statischer Linien-, Kurs- oder Umlaufkatalog ist nicht enthalten.
 
-Nicht jede Funktion ist auf jedem Controller-Typ verfügbar. Der jeweilige
-Action-Eintrag in der Stream-Deck-Software gibt den benötigten Controller vor.
+### Update-Kompatibilität
 
-### Bekannte Einschränkungen
+Die stabile Plugin-UUID lautet `de.rhao92.thebus-telemetry-interface`. Updates
+ab `2.15.0.17-beta` verwenden dieselbe technische Identität und behalten
+bestehende Belegungen und Einstellungen. Beim Wechsel von `2.14.1` oder älter
+müssen Actions wegen der damals verwendeten früheren Identität einmalig neu
+zugewiesen werden.
 
-- Navigation ist durch 18 gezielte Regressionsgruppen und die bisher erfassten
-  Live-Traces abgesichert, benötigt als Beta aber weitere Fahrten auf anderen
-  Linien, Karten und Busmodellen.
-- Gesamt- und Reststrecke können mit `≈` gekennzeichnet werden, wenn keine
-  vollständige Liniengeometrie vorliegt und bestätigte Haltestellenabschnitte
-  als Fallback verwendet werden.
-- Klima, Temperatur, Luftverteilung und die sichtbaren Klimatasten wurden am
-  getesteten eCityBus bestätigt. Die Lüftergeschwindigkeit ist dort über die
-  aktuelle Telemetrieschnittstelle nur lesbar und wird als `NUR ANZEIGE`
-  dargestellt. Steuerung wird nur aktiviert, wenn ein Bus echte FanSpeed-
-  Events meldet.
-- Die automatische Ventilation ist als eindeutiges `AUS`/`EIN` umgesetzt; der
-  abschließende Live-Retest der binären Schaltfolge steht noch aus.
-- Die Elgato-Validierung meldet keine Fehler. 111 geerbte Hinweise betreffen
-  fehlende `@2x`-Varianten älterer Icons und blockieren diese Beta nicht.
-
-### Feedback und 60-Sekunden-Navigationsdiagnose
-
-Bitte für Fehler den
-[Bug-Report](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/issues/new?template=bug_report.md)
-und für neue Ideen den
-[Feature-Request](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/issues/new?template=feature_request.md)
-verwenden. Plugin-Version, Busmodell, Linie/Route, Haltestelle oder
-Straßenabschnitt und Stream-Deck-Modell helfen bei der Einordnung. Bei
-Navigationsproblemen kann die manuell erstellte 60-Sekunden-TXT angehängt
-werden; private Daten sollten vorher entfernt werden.
-
-### Aus dem Quellcode bauen
-
-Vorausgesetzt werden Node.js 20 und npm.
-
-```bash
-npm ci
-npm run build
-npm run pack
-```
-
-Das erzeugte Installationspaket ist für Entwicklungstests gedacht. Für normale
-Nutzer ist der geprüfte Installer unter den
-[GitHub Releases](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases)
-der bevorzugte Download.
+---
 
 ## English
 
-### Status and compatibility
+### Download
 
-This release is a published public beta with 50 telemetry-based actions.
-Displays only change after confirmed in-game feedback; the plugin does not
-simulate vehicle states.
-
-**Testing currently covers only the MB eCitaro / MB eCityBus 18-metre,
-four-door model.** Other bus models may work but have not been officially
-tested. Different telemetry, button or state names may affect individual
-displays and controls.
+- Installer: https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/download/v2.16.0/Rhao92-The-Bus-Stream-Deck-Plugin-2.16.0.21.zip
+- Release notes: https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/tag/v2.16.0
+- Report a bug: https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/issues/new?template=bug_report.md
+- Suggest a feature: https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/issues/new?template=feature_request.md
 
 ### Requirements
 
 - Windows 10 or later
-- Elgato Stream Deck software `7.2` or later
+- Elgato Stream Deck software 7.2 or later
 - The Bus with local telemetry available at `127.0.0.1:37337`
-- Optional physical Stream Deck hardware or Stream Deck Mobile on iPhone and
-  iPad; Stream Deck + is required for dials and the full panel
+- physical Stream Deck hardware or Stream Deck Mobile on iPhone or iPad
+- Stream Deck + for dials and full panels
 
-### Download and installation
+### Installation
 
-1. Download the verified
-   [Public Beta 2.15.0.18 ZIP](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/download/v2.15.0.18-beta/Rhao92-The-Bus-Telemetry-Interface-2.15.0.18-beta.zip).
-2. Extract the ZIP and double-click the included `.streamDeckPlugin` file.
+1. Download the installer from the link above.
+2. Double-click the `.streamDeckPlugin` file.
 3. Confirm installation or update in the Stream Deck application.
 4. Start The Bus and load a bus completely.
-5. Add the required actions to your Stream Deck. Configure dropdown actions in
+5. Add the required actions to Stream Deck and configure adjustable actions in
    the Property Inspector.
 
-The ZIP also contains `README.md`, `PATCHLOG.txt` and `ROADMAP.txt`. See the
-[complete release notes](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/tag/v2.15.0.18-beta)
-for the verified beta scope.
+### Language
 
-This beta uses the stable plugin UUID
-`de.rhao92.thebus-telemetry-interface`. Users upgrading from `2.14.1` or older
-must assign their actions once because those versions used a previous
-identity. Updates from `2.15.0.17-beta` onward use the same identity and behave
-as normal updates.
-
-### Live telemetry and vehicle displays
-
-Speed, speed limit, power, battery, gear, ignition, parking brake, indicators
-and hazard lights are shown from available game data. The shared runtime state
-distinguishes `OFFLINE`, `NO_BUS`, `BUS_NOT_READY`, `BUS_READY` and
-`MISSION_READY`.
-
-### Vehicle controls
-
-The Bus Stream Deck Plugin includes gear selection, ignition, parking brake,
-indicators, hazard lights, wipers, retarder, sun blind, exterior lighting and
-passenger lighting. A key press alone does not prove a state; visible feedback
-comes from the game.
-
-### Doors and kneeling
-
-Available actions include individual doors, Door All, door clearance,
-automatic door closing, kneeling, automatic kneeling and wheelchair ramp.
-Door All distinguishes closed, open, mixed and moving doors. The regular
-kneeling icon follows the real mechanical state.
-
-### Navigation
-
-Experimental navigation provides maneuver, maneuver distance, next stop,
-total and remaining distance, line progress, ETA, predicted schedule delta and
-confidence. Uncertain route matches or maneuvers remain neutral instead of
-guessing a direction.
-
-### Full panels and status displays
-
-Vehicle, timetable and navigation full panels use all four Stream Deck + dial
-segments as one continuous view. Keypad displays and individual dials are also
-available for supported functions.
+German and English are included in the same installation. Action names,
+descriptions, Property Inspectors, and dynamic displays automatically follow
+the Stream Deck application language. German is the fallback for languages
+that are not currently supported. Changing language does not alter UUIDs,
+profile assignments, or saved selections.
 
 ### Feature overview
 
-| Area | Included features |
+| Area | Features |
 | --- | --- |
-| Navigation | Maneuver, maneuver distance, next stop, total/remaining distance, line progress, ETA, predicted delta and confidence in one dropdown action |
-| Timetable | Stop, arrival, departure, schedule delta, in-game time, status and stop request on keys, single panels and the full panel |
-| Vehicle | Speed, speed limit, power, continuously filled battery, gear, ignition, parking brake, indicators and hazard lights |
-| Doors and access | Individual doors, Door All, door clearance, automatic door closing, kneeling, automatic kneeling and wheelchair ramp |
-| Climate | Climate on/off, heating/cooling, rear climate, circulation, front circulation, automatic ventilation, temperature and airflow |
-| Lighting | Passenger lighting toggle, dim and bright controls |
-| Runtime status | Central `OFFLINE`, `NO_BUS`, `BUS_NOT_READY`, `BUS_READY` and `MISSION_READY` states |
+| Navigation | Maneuver, maneuver distance, next stop, line length, remaining distance, line progress, ETA, predicted schedule delta, and prediction confidence |
+| Timetable | Stop, arrival, departure, schedule delta, in-game time with seconds, status, and stop request on keys, a single panel, and the Fullpanel |
+| Vehicle | Speed, speed limit, power or trip consumption, battery, gear, ignition, parking brake, indicators, and hazard lights |
+| Doors and access | Individual doors, Door All, door clearance, automatic door closing, kneeling, automatic kneeling, and wheelchair ramp |
+| Climate | Climate on/off, heating/cooling, rear climate, circulation, front circulation, automatic ventilation, temperature, and airflow |
+| Lighting and driving | Exterior lighting, passenger lighting, wipers, retarder, and sun blind |
+| Runtime status | `OFFLINE`, `NO_BUS`, `BUS_NOT_READY`, `BUS_READY`, and `MISSION_READY` |
 
-The central runtime state shows `OFFLINE` only when telemetry is unavailable.
-Without a confirmed bus, actions use neutral grey `---`/`--` states or “Not in
-bus”. Automatic kneeling exposes a ready state only after the bus context is
-fully confirmed. Door All distinguishes closed, open and mixed door states.
-The battery display fills continuously rather than in coarse segments.
+Displays change only after confirmed game feedback. Unknown or uncertain states
+remain neutral.
 
-#### Navigation capture (`2.15.0.18-beta`)
+### Navigation
 
-Pressing the visible **Navigation · Debug speichern** action exports the
-preceding 60 seconds of navigation to a TXT file. The ring buffer starts with
-the plugin and stays in memory; no file is written
-before the button is pressed. The capture includes telemetry, projection
-candidates, selection/rejection reasons and only the lane/polyline geometry
-referenced by that time window.
+Experimental navigation evaluates confirmed connected route paths and can show
+maneuver, distance, next stop, remaining route, line progress, ETA, and
+prediction values. Mission characteristics distinguish regular stops, final
+destinations, and operational pause points. Contradictory or incomplete
+geometry remains neutral instead of producing a guessed direction.
 
-Windows destination folder:
+### Battery, power, and trip consumption
+
+Battery level is shown with one decimal place. A real `Powermeter` remains the
+authoritative power source. If it is absent on a confirmed electric bus, a
+clearly marked average trip consumption (`Ø`) in `kWh/100 km` can appear after
+at least 200 metres. It uses confirmed energy change, official speed, and
+advancing game time.
+
+The average continues from plugin startup across stops, standstill, and Stream
+Deck page changes. Pressing the existing power/consumption key restarts only
+this local measurement and sends no game command.
+
+### Full panels and Stream Deck Mobile
+
+Vehicle, timetable, and Navigation Fullpanels use all four Stream Deck + dial
+segments as one continuous view. Regular keypad actions are available on
+matching Stream Deck models and through Stream Deck Mobile. Not every action is
+available on every controller type; the Stream Deck application identifies the
+required controller.
+
+### Navigation diagnostics
+
+Pressing the visible **Navigation · Debug speichern** action saves the previous
+roughly 60 seconds as a TXT file. The ring buffer remains memory-only and no
+file is written without the key press.
+
+Windows destination:
 `Documents\Projekte\The Bus\NaviDebug`
 
-After a verified export the key shows `PATH 60S`. There is deliberately no
-silent OneDrive or plugin-folder fallback. If this exact folder
-cannot be written, the key shows a red path/write error instead.
+For a navigation issue, include the bus model, line/route, stop or road section,
+and the manually created TXT in the GitHub issue. Remove private information
+before attaching it.
 
-### Supported Stream Deck areas
+### Compatibility and limitations
 
-- **Keypad:** Vehicle, door, climate, timetable and navigation actions on
-  Stream Deck models with regular LCD keys.
-- **Stream Deck +:** Additional dials and touch display for timetable,
-  temperature, airflow and – where the bus reports control events – fan speed.
-- **Stream Deck Mobile:** Keypad actions on iPhone and iPad without separate
-  physical Stream Deck hardware.
-- **Full panel:** Full-width view across all four Stream Deck + dial segments.
+- Fully confirmed vehicle coverage currently applies to the four-door
+  18-metre MB eCitaro / MB eCityBus.
+- Other vehicles may use different telemetry, button, or state names; missing
+  values remain neutral.
+- Navigation remains experimental and may deliberately hide values when route
+  geometry is unknown or incomplete.
+- Fan speed is read-only on the confirmed vehicle. Control is enabled only when
+  a bus provides real matching control events.
+- Ticket type, price, payment, change, and receipt status are unavailable while
+  `BusLogic.Sales` provides no genuine values.
+- No static line, course, or duty catalogue is included.
 
-Not every action is available on every controller type. The Stream Deck action
-entry identifies whether it requires a key or encoder.
+### Update compatibility
 
-### Known limitations
-
-- Navigation is protected by 18 targeted regression groups and all captured
-  live traces to date, but beta testing on additional lines, maps and bus
-  models is still required.
-- Total and remaining distance can be marked with `≈` when complete line
-  geometry is unavailable and confirmed stop sections are used as a fallback.
-- Climate, temperature, airflow and the visible climate keys were confirmed on
-  the tested eCityBus. Its fan-speed telemetry is read-only and is shown as
-  `DISPLAY ONLY`. Control is enabled only when a bus reports real FanSpeed
-  events.
-- Automatic ventilation is implemented as a clear `OFF`/`ON` toggle; the final
-  live retest of the binary sequence is still pending.
-- Elgato validation reports no errors. The 111 inherited notices concern
-  missing `@2x` variants of older icons and do not block this beta.
-
-### Feedback and 60-second navigation diagnostics
-
-Use the
-[bug report](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/issues/new?template=bug_report.md)
-for defects and the
-[feature request](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/issues/new?template=feature_request.md)
-for new ideas. Include the plugin version, bus model, line/route, stop or road
-section and Stream Deck model. For navigation problems, attach the manually
-created 60-second TXT after removing any private information.
-
-### Building from source
-
-Node.js 20 and npm are required.
-
-```bash
-npm ci
-npm run build
-npm run pack
-```
-
-The resulting package is intended for development tests. Regular users should
-prefer the verified installer under
-[GitHub Releases](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases).
-
-Rhao92's The Bus Stream Deck Plugin is an independent community project and is
-not an official TML Studios or Elgato product.
+The stable plugin UUID is `de.rhao92.thebus-telemetry-interface`. Updates from
+`2.15.0.17-beta` onward use the same technical identity and retain existing
+assignments and settings. Users upgrading from `2.14.1` or older must assign
+actions once because those versions used an earlier identity.

@@ -10,7 +10,7 @@
       "ES2022",
       "DOM"
     ],
-    "outDir": "../../tbp_212_15_qa_build",
+    "outDir": "../../Checkpoints/Verification/Streamdeck/CoreState",
     "rootDir": "..",
     "noImplicitOverride": true
   },
