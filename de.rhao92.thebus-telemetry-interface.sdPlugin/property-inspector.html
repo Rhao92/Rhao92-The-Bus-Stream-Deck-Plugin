@@ -93,15 +93,32 @@
           ["door-1", "Tür 1"],
           ["door-2", "Tür 2"],
           ["door-3", "Tür 3"],
-          ["door-4", "Tür 4"]
+          ["door-4", "Tür 4"],
+          ["clearance", "Türfreigabe"],
+          ["automatic-closing", "Automatisches Türschließen"]
         ]
       },
       "de.rhao92.thebus-telemetry-interface.gear-selector": {
         fallback: "D",
         options: [
-          ["D", "Gang D"],
-          ["N", "Gang N"],
-          ["R", "Gang R"]
+          ["D", "Gangwahl · D"],
+          ["N", "Gangwahl · N"],
+          ["R", "Gangwahl · R"],
+          ["indicator-left", "Blinker · links"],
+          ["indicator-right", "Blinker · rechts"],
+          ["indicator-warning", "Blinker · Warnblinker"],
+          ["brake-parking", "Bremsen · Feststellbremse"],
+          ["brake-stop", "Bremsen · Haltestellenbremse"],
+          ["retarder-increase", "Retarder · Stufe höher"],
+          ["retarder-decrease", "Retarder · Stufe niedriger"],
+          ["retarder-off", "Retarder · Aus"],
+          ["retarder-level-1", "Retarder · Direkt auf Stufe 1"],
+          ["retarder-level-2", "Retarder · Direkt auf Stufe 2"],
+          ["retarder-level-3", "Retarder · Direkt auf Stufe 3"],
+          ["retarder-level-4", "Retarder · Direkt auf Stufe 4"],
+          ["retarder-level-5", "Retarder · Direkt auf Stufe 5"],
+          ["wiper-increase", "Scheibenwischer · Stufe höher"],
+          ["wiper-decrease", "Scheibenwischer · Stufe niedriger"]
         ]
       },
       "de.rhao92.thebus-telemetry-interface.indicator-control": {
@@ -110,6 +127,13 @@
           ["left", "Blinker links"],
           ["right", "Blinker rechts"],
           ["warning", "Warnblinker"]
+        ]
+      },
+      "de.rhao92.thebus-telemetry-interface.parking-brake": {
+        fallback: "parking",
+        options: [
+          ["parking", "Feststellbremse"],
+          ["stop", "Haltestellenbremse"]
         ]
       },
       "de.rhao92.thebus-telemetry-interface.retarder-control": {
@@ -140,11 +164,12 @@
         ]
       },
       "de.rhao92.thebus-telemetry-interface.passenger-light-control": {
-        fallback: "toggle",
+        fallback: "off",
         options: [
-          ["toggle", "Ein / Aus"],
-          ["dim", "Dunkler"],
-          ["bright", "Heller"]
+          ["off", "Aus"],
+          ["on", "Ein"],
+          ["dim", "Gedimmt"],
+          ["bright", "Hell"]
         ]
       },
       "de.rhao92.thebus-telemetry-interface.exterior-light-control": {

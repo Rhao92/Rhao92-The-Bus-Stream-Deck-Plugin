@@ -2749,7 +2749,7 @@ function snapshot(
   assert.equal(exported.directory, directory);
   assert.match(text, /Navigation Blackbox/);
   assert.match(text, /Format-Version: 3/);
-  assert.match(text, /Plugin-Version: 2\.16\.0\.21/);
+  assert.match(text, /Plugin-Version: 2\.17\.0\.0/);
   assert.match(text, /ROUTE_CONTEXTS_JSON/);
   assert.match(text, /"relevantLaneFeatures"/);
   assert.match(text, /"engineRoute"/);

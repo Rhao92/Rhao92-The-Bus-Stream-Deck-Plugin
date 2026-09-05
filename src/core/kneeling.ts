@@ -1,7 +1,9 @@
 import type { VehicleTelemetry } from "./telemetry";
 import { readVehicleButtonState } from "./vehicle-buttons";
+import { vehicleIdentityContains } from "./vehicle-identity";
 
 const KNEELING_BUTTON = "Kneeling";
+const LIFTING_BUTTON = "Lifting";
 const WHEEL_LOWERED_THRESHOLD = 2;
 const WHEEL_TRANSITION_DELTA = 1.25;
 const WHEEL_MOTION_START_DELTA = 0.65;
@@ -30,8 +32,36 @@ export function normalizeKneelingState(
 export function readKneelingButtonState(
   vehicle: VehicleTelemetry | undefined
 ): boolean | undefined {
-  return normalizeKneelingState(
+  // Beim Scania bleibt der Kneeling-Button während der echten mechanischen
+  // Bewegung unzuverlässig beziehungsweise wechselt erst beim Anheben. Die
+  // live bestätigte Rad-/Federungsdifferenz ist dort die belastbare Quelle.
+  if (vehicleIdentityContains(vehicle, "scania")) {
+    return undefined;
+  }
+
+  // Der MAN verwendet die beiden Zustände entgegengesetzt zur übrigen
+  // Fahrzeugfamilie. Der Live-Abgleich mit KneelDown/KneelUp und der echten
+  // Radlage bestätigt: Primary = abgesenkt, Secondary = angehoben.
+  if (vehicleIdentityContains(vehicle, "man")) {
+    const state = String(readVehicleButtonState(vehicle, KNEELING_BUTTON) ?? "")
+      .trim()
+      .toLowerCase();
+
+    if (state === "primary") {
+      return true;
+    }
+
+    if (state === "secondary") {
+      return false;
+    }
+  }
+
+  const kneeling = normalizeKneelingState(
     readVehicleButtonState(vehicle, KNEELING_BUTTON)
+  );
+
+  return kneeling ?? normalizeKneelingState(
+    readVehicleButtonState(vehicle, LIFTING_BUTTON)
   );
 }
 

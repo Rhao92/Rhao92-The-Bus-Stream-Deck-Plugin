@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Rhao92's The Bus Stream Deck Plugin – Fahrzeug-Anzeige</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 13px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      color: #f4f4f4;
+      background: #2b2b2b;
+    }
+
+    h1 {
+      margin: 0 0 5px;
+      color: #38c9ff;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    p {
+      margin: 0 0 14px;
+      color: #bdbdbd;
+      line-height: 1.35;
+    }
+
+    fieldset {
+      display: grid;
+      gap: 7px;
+      margin: 0;
+      padding: 0;
+      border: 0;
+    }
+
+    label {
+      display: flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 8px 10px;
+      border: 1px solid #4a4a4a;
+      border-radius: 6px;
+      background: #333;
+      cursor: pointer;
+    }
+
+    label:hover { border-color: #38c9ff; }
+
+    label:has(input:checked) {
+      border-color: #38c9ff;
+      background: #1d3038;
+      box-shadow: 0 0 7px rgb(56 201 255 / 30%);
+    }
+
+    input {
+      margin: 0 9px 0 0;
+      accent-color: #38c9ff;
+    }
+
+    strong { font-weight: 700; }
+  </style>
+</head>
+<body data-title-suffix="Fahrzeug-Anzeige">
+  <h1 data-i18n="Fahrzeug-Anzeige">Fahrzeug-Anzeige</h1>
+  <p data-i18n="Wähle aus, welchen Fahrzeugwert diese Taste anzeigen soll.">Wähle aus, welchen Fahrzeugwert diese Taste anzeigen soll.</p>
+
+  <fieldset>
+    <label><input type="radio" name="kind" value="speed"><strong data-i18n="Geschwindigkeit">Geschwindigkeit</strong></label>
+    <label><input type="radio" name="kind" value="limit"><strong data-i18n="Tempolimit">Tempolimit</strong></label>
+    <label><input type="radio" name="kind" value="power"><strong data-i18n="Leistung / Verbrauch">Leistung / Verbrauch</strong></label>
+    <label><input type="radio" name="kind" value="battery"><strong data-i18n="Akkustand">Akkustand</strong></label>
+  </fieldset>
+
+  <script src="i18n.js"></script>
+  <script>
+    const validKinds = new Set(["speed", "limit", "power", "battery"]);
+    let websocket;
+    let contexts = [];
+    let actionUuid = "de.rhao92.thebus-telemetry-interface.vehicle-speed";
+    let settings = { kind: "speed" };
+    let pendingKind = null;
+
+    function selectedKind(value) {
+      return validKinds.has(value) ? value : "speed";
+    }
+
+    function showSelection() {
+      const input = document.querySelector(`input[name="kind"][value="${selectedKind(settings.kind)}"]`);
+      if (input) input.checked = true;
+    }
+
+    function saveSelection(kind) {
+      settings = { ...settings, kind: selectedKind(kind) };
+      pendingKind = settings.kind;
+      if (!websocket || websocket.readyState !== WebSocket.OPEN) return;
+      for (const targetContext of contexts) {
+        websocket.send(JSON.stringify({
+          event: "setSettings",
+          action: actionUuid,
+          context: targetContext,
+          payload: settings,
+        }));
+      }
+    }
+
+    document.querySelectorAll('input[name="kind"]').forEach((input) => {
+      input.addEventListener("change", () => {
+        if (input.checked) saveSelection(input.value);
+      });
+    });
+    showSelection();
+
+    function connectElgatoStreamDeckSocket(port, propertyInspectorUUID, registerEvent, info, actionInfo) {
+      TheBusI18n.setLanguage(info);
+      try {
+        const parsed = JSON.parse(actionInfo);
+        contexts = Array.from(new Set([
+          parsed?.context,
+          propertyInspectorUUID,
+        ].filter((value) => typeof value === "string" && value.length > 0)));
+        actionUuid = parsed?.action || actionUuid;
+        settings = {
+          ...(parsed?.payload?.settings ?? {}),
+          kind: selectedKind(parsed?.payload?.settings?.kind),
+        };
+      } catch {
+        contexts = [propertyInspectorUUID].filter(Boolean);
+        settings = { kind: "speed" };
+      }
+      showSelection();
+
+      websocket = new WebSocket(`ws://127.0.0.1:${port}`);
+      websocket.addEventListener("open", () => {
+        websocket.send(JSON.stringify({ event: registerEvent, uuid: propertyInspectorUUID }));
+        for (const targetContext of contexts) {
+          websocket.send(JSON.stringify({
+            event: "getSettings",
+            action: actionUuid,
+            context: targetContext,
+          }));
+        }
+      });
+      websocket.addEventListener("message", (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          if (message.event !== "didReceiveSettings" || !contexts.includes(message.context)) return;
+          const received = {
+            ...(message.payload?.settings ?? {}),
+            kind: selectedKind(message.payload?.settings?.kind),
+          };
+          if (pendingKind !== null && received.kind !== pendingKind) return;
+          settings = received;
+          if (pendingKind === received.kind) pendingKind = null;
+          showSelection();
+        } catch {
+          // Unbekannte WebSocket-Nachrichten dürfen den Inspector nicht stoppen.
+        }
+      });
+    }
+  </script>
+</body>
+</html>

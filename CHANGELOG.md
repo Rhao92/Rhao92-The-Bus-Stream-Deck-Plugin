@@ -3,6 +3,63 @@
 All notable public changes to Rhao92's The Bus Stream Deck Plugin are listed
 in this file.
 
+## [2.17.0] - 2026-09-05
+
+- Added additive vehicle-specific control mappings based exclusively on full
+  official local telemetry captures for the MB eCitaro / eCityBus, Ebusco
+  2.2, Solaris Urbino, MAN Lion's City double-decker, Scania Citywide LF, and
+  VDL Citea LLE 120 / LLE 127.
+- Added a versioned vehicle-telemetry catalogue and normalized regression
+  fixtures. Unknown or changed vehicle data remains neutral until it is
+  confirmed instead of being inferred from another bus family.
+- Fixed Ebusco 2.2 gear control. Direct D/N/R choices now resolve to the real
+  relative `GearUp` and `GearDown` sequence while the selected action and
+  feedback remain direct targets for the user.
+- Added confirmed Ebusco passenger-light targets for off, dimmed, and bright
+  using the required press/release events and genuine three-state feedback.
+- Corrected Solaris Urbino door 2 and door 4 control mapping without swapping
+  their physical feedback. Neutral gear feedback now prefers the reliable
+  `Gear Selector` state over the contradictory selector field.
+- Added confirmed Urbino passenger-light targets with safe activation of the
+  main light before selecting dimmed or bright.
+- Corrected the physical MAN door 2/3 ordering and the MAN-specific inverted
+  kneeling feedback without altering other vehicles.
+- Added synchronized MAN upper- and lower-deck passenger-light targets for
+  off, dimmed, and bright. Existing profiles using the earlier toggle setting
+  continue to coordinate both decks.
+- Corrected the MAN-specific warmer/cooler event direction.
+- Added Scania's genuine four-stage climate control, coordinated front/rear
+  passenger-light targets, and held manual kneeling operation with mechanical
+  feedback.
+- Kept non-functional Scania rear-door events and automatic kneeling blocked;
+  only confirmed controls are exposed as available.
+- Corrected VDL Citea door-event names and Door All behavior, added direct gear
+  selection, confirmed binary passenger lighting, lifting/kneeling and
+  automatic kneeling, climate on/off and warmer/cooler control, door clearance,
+  and automatic door closing.
+- Kept VDL passenger temperature neutral because the vehicle supplies no
+  numeric value, and limited its passenger-light status to the confirmed
+  binary off/on states.
+- Added a stop-brake choice to the existing brake action. It uses the genuine
+  per-vehicle event and feedback when available; the previous parking-brake
+  mode remains the default for existing profiles.
+- Consolidated related controls into clearer configurable actions. The visible
+  action list now contains 17 entries while all 50 established action UUIDs,
+  runtime registrations, settings, and existing profile assignments remain
+  compatible.
+- Extended the existing `Fahrt · Steuerung` / `Driving · Controls` action with
+  direct gear selection, indicators and hazard lights, parking or stop brake,
+  retarder, and wipers. Ignition and sun blind remain separate because their
+  confirmed hold behavior differs.
+- Extended the shared vehicle display, door, and timetable actions with their
+  existing compatible modes instead of requiring duplicate visible actions.
+- Added German and English Property Inspector labels for the consolidated
+  vehicle and driving choices.
+- Added separate package preparation for the future Elgato Marketplace edition
+  named `The Bus Control Center`. Marketplace-only white list icons and visible
+  naming do not alter the GitHub package's colored icons, runtime, UUIDs, or
+  key-state images.
+
 ## [2.16.0] - 2026-08-29
 
 - Added seconds to the real in-game clock on timetable keys, single panels and

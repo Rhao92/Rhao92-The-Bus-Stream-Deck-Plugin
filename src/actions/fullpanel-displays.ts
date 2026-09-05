@@ -34,6 +34,27 @@ type TimetableContext = {
 
 type TimetableController = "encoder" | "keypad";
 type VehicleDisplayKind = "speed" | "limit" | "power" | "battery";
+type VehicleDisplaySettings = {
+  kind?: string;
+};
+
+type VehicleDisplayContext = {
+  action: KeyAction<VehicleDisplaySettings>;
+  kind: VehicleDisplayKind;
+};
+
+const VEHICLE_DISPLAY_KINDS = new Set<VehicleDisplayKind>([
+  "speed",
+  "limit",
+  "power",
+  "battery"
+]);
+
+function normalizeVehicleDisplayKind(value: unknown): VehicleDisplayKind {
+  return VEHICLE_DISPLAY_KINDS.has(value as VehicleDisplayKind)
+    ? value as VehicleDisplayKind
+    : "speed";
+}
 
 abstract class ConfigurableTimetableDisplayAction
   extends SingletonAction<TimetableSettings> {
@@ -69,7 +90,7 @@ abstract class ConfigurableTimetableDisplayAction
       this.warn("Panel-Auswahl konnte nicht gelesen werden.", error);
     }
 
-    const kind = normalizeTimetableKind(settings.kind);
+    const kind = this.normalizeKind(settings.kind);
     this.contexts.set(actionContext.id, { action: actionContext, kind });
 
     if (this.controller === "encoder") {
@@ -113,7 +134,7 @@ abstract class ConfigurableTimetableDisplayAction
       return;
     }
 
-    const kind = normalizeTimetableKind(ev.payload?.settings?.kind);
+    const kind = this.normalizeKind(ev.payload?.settings?.kind);
     if (context.kind === kind) {
       return;
     }
@@ -170,7 +191,9 @@ abstract class ConfigurableTimetableDisplayAction
         if (
           this.viewModel.stopRequest
           && [...this.contexts.values()].some(
-            (context) => context.kind === "stop" || context.kind === "status"
+            (context) => context.kind === "stop"
+              || context.kind === "status"
+              || context.kind === "stop-request"
           )
         ) {
           this.requestRender();
@@ -262,6 +285,13 @@ abstract class ConfigurableTimetableDisplayAction
 
     streamDeck.logger.warn(`${source} ${message}`, error);
   }
+
+  private normalizeKind(value: unknown): TimetableKind {
+    const kind = normalizeTimetableKind(value);
+    return this.controller === "encoder" && kind === "stop-request"
+      ? "stop"
+      : kind;
+  }
 }
 
 @action({ UUID: "de.rhao92.thebus-telemetry-interface.timetable-panel" })
@@ -274,11 +304,13 @@ export class TimetableButtonAction extends ConfigurableTimetableDisplayAction {
   protected readonly controller = "keypad";
 }
 
-abstract class VehicleKeypadDisplayAction extends SingletonAction {
-  protected abstract readonly kind: VehicleDisplayKind;
+abstract class VehicleKeypadDisplayAction
+  extends SingletonAction<VehicleDisplaySettings> {
+  protected abstract readonly defaultKind: VehicleDisplayKind;
+  protected readonly configurable: boolean = false;
 
   protected readonly telemetryHub = FullpanelViewModelHub.instance;
-  private readonly contexts = new Map<string, KeyAction>();
+  private readonly contexts = new Map<string, VehicleDisplayContext>();
   private readonly lastImages = new Map<string, string>();
   private unsubscribeTelemetry: (() => void) | undefined;
   private renderQueued = false;
@@ -286,15 +318,61 @@ abstract class VehicleKeypadDisplayAction extends SingletonAction {
   private disposed = false;
   private viewModel: FullpanelViewModel = this.telemetryHub.viewModel;
 
-  override async onWillAppear(ev: WillAppearEvent): Promise<void> {
+  override async onWillAppear(
+    ev: WillAppearEvent<VehicleDisplaySettings>
+  ): Promise<void> {
     if (this.disposed) {
       return;
     }
 
-    const key = ev.action as KeyAction;
-    this.contexts.set(key.id, key);
+    const key = ev.action as KeyAction<VehicleDisplaySettings>;
+    let settings: VehicleDisplaySettings = {};
+
+    if (this.configurable) {
+      try {
+        settings = await key.getSettings<VehicleDisplaySettings>();
+      } catch (error) {
+        this.warn("Anzeigeauswahl konnte nicht gelesen werden.", error);
+      }
+    }
+
+    const kind = this.configurable
+      ? normalizeVehicleDisplayKind(settings.kind)
+      : this.defaultKind;
+    this.contexts.set(key.id, { action: key, kind });
     await key.setTitle("");
+
+    if (this.configurable && settings.kind !== kind) {
+      try {
+        await key.setSettings<VehicleDisplaySettings>({ ...settings, kind });
+      } catch (error) {
+        this.warn("Standardanzeige konnte nicht gespeichert werden.", error);
+      }
+    }
+
     this.ensureTelemetry();
+    this.requestRender();
+  }
+
+  override onDidReceiveSettings(
+    ev: DidReceiveSettingsEvent<VehicleDisplaySettings>
+  ): void {
+    if (!this.configurable || this.disposed) {
+      return;
+    }
+
+    const context = this.contexts.get(ev.action.id);
+    if (!context) {
+      return;
+    }
+
+    const kind = normalizeVehicleDisplayKind(ev.payload?.settings?.kind);
+    if (context.kind === kind) {
+      return;
+    }
+
+    context.kind = kind;
+    this.lastImages.delete(ev.action.id);
     this.requestRender();
   }
 
@@ -302,6 +380,12 @@ abstract class VehicleKeypadDisplayAction extends SingletonAction {
     this.contexts.delete(ev.action.id);
     this.lastImages.delete(ev.action.id);
     this.releaseTelemetryIfIdle();
+  }
+
+  override onKeyDown(ev: KeyDownEvent<VehicleDisplaySettings>): void {
+    if (this.contexts.get(ev.action.id)?.kind === "power") {
+      this.telemetryHub.resetAverageConsumption();
+    }
   }
 
   dispose(): void {
@@ -369,16 +453,16 @@ abstract class VehicleKeypadDisplayAction extends SingletonAction {
   }
 
   private async renderNow(): Promise<void> {
-    const image = renderKeypad(this.viewModel, this.kind) as string;
     const jobs: Promise<void>[] = [];
 
-    for (const [contextId, key] of this.contexts) {
+    for (const [contextId, context] of this.contexts) {
+      const image = renderKeypad(this.viewModel, context.kind) as string;
       if (this.lastImages.get(contextId) === image) {
         continue;
       }
 
       this.lastImages.set(contextId, image);
-      jobs.push(key.setImage(image).catch((error: unknown) => {
+      jobs.push(context.action.setImage(image).catch((error: unknown) => {
         this.lastImages.delete(contextId);
         this.warn("Fahrzeuganzeige konnte nicht aktualisiert werden.", error);
       }));
@@ -388,7 +472,7 @@ abstract class VehicleKeypadDisplayAction extends SingletonAction {
   }
 
   private warn(message: string, error?: unknown): void {
-    const source = `[VehicleKeypad:${this.kind}]`;
+    const source = `[VehicleKeypad:${this.defaultKind}]`;
     if (error === undefined) {
       streamDeck.logger.warn(`${source} ${message}`);
       return;
@@ -400,24 +484,21 @@ abstract class VehicleKeypadDisplayAction extends SingletonAction {
 
 @action({ UUID: "de.rhao92.thebus-telemetry-interface.vehicle-speed" })
 export class VehicleSpeedAction extends VehicleKeypadDisplayAction {
-  protected readonly kind = "speed";
+  protected readonly defaultKind = "speed";
+  protected override readonly configurable = true;
 }
 
 @action({ UUID: "de.rhao92.thebus-telemetry-interface.vehicle-speed-limit" })
 export class VehicleSpeedLimitAction extends VehicleKeypadDisplayAction {
-  protected readonly kind = "limit";
+  protected readonly defaultKind = "limit";
 }
 
 @action({ UUID: "de.rhao92.thebus-telemetry-interface.vehicle-power" })
 export class VehiclePowerAction extends VehicleKeypadDisplayAction {
-  protected readonly kind = "power";
-
-  override onKeyDown(_ev: KeyDownEvent): void {
-    this.telemetryHub.resetAverageConsumption();
-  }
+  protected readonly defaultKind = "power";
 }
 
 @action({ UUID: "de.rhao92.thebus-telemetry-interface.vehicle-battery" })
 export class VehicleBatteryAction extends VehicleKeypadDisplayAction {
-  protected readonly kind = "battery";
+  protected readonly defaultKind = "battery";
 }

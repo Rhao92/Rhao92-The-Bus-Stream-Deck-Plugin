@@ -50,6 +50,7 @@ const inspectors = [
   "property-inspector/hvac.html",
   "property-inspector/navigation.html",
   "property-inspector/timetable.html",
+  "property-inspector/vehicle.html",
 ];
 for (const relative of inspectors) {
   const html = await readFile(new URL(relative, pluginRoot), "utf8");
@@ -61,5 +62,7 @@ assert.doesNotThrow(() => new Function(inspectorI18n));
 assert.match(inspectorI18n, /application\?\.language/);
 assert.match(inspectorI18n, /All doors/);
 assert.match(inspectorI18n, /Prediction confidence/);
+assert.match(inspectorI18n, /Vehicle display/);
+assert.match(inspectorI18n, /Automatic door closing/);
 
 console.log("localization: German fallback and English resources passed");

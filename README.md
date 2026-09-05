@@ -1,6 +1,6 @@
 # Rhao92's The Bus Stream Deck Plugin
 
-Release: `2.16.0` · Installer build: `2.16.0.21`
+Release: `2.17.0` · Installer build: `2.17.0.0`
 
 **Rhao92's The Bus Stream Deck Plugin** is a free, independent community-made
 Elgato Stream Deck plugin for **The Bus by TML Studios**. It uses official local
@@ -11,7 +11,7 @@ Deck hardware and Stream Deck Mobile on iPhone and iPad.
 This project is not an official product of, affiliated with, or endorsed by TML
 Studios or Elgato.
 
-![Rhao92's The Bus Stream Deck Plugin showing live vehicle telemetry, timetable controls and navigation on Stream Deck](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/download/v2.16.0/Preview.jpg)
+![Rhao92's The Bus Stream Deck Plugin showing live vehicle telemetry, timetable controls and navigation on Stream Deck](https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/download/v2.17.0/Preview.jpg)
 
 [Deutsch](#deutsch) · [English](#english)
 
@@ -21,8 +21,8 @@ Studios or Elgato.
 
 ### Download
 
-- Installer: https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/download/v2.16.0/Rhao92-The-Bus-Stream-Deck-Plugin-2.16.0.21.zip
-- Release-Beschreibung: https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/tag/v2.16.0
+- Installer: https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/download/v2.17.0/Rhao92-The-Bus-Stream-Deck-Plugin-2.17.0.0.zip
+- Release-Beschreibung: https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/tag/v2.17.0
 - Fehler melden: https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/issues/new?template=bug_report.md
 - Idee vorschlagen: https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/issues/new?template=feature_request.md
 
@@ -57,7 +57,7 @@ Profilzuordnungen oder gespeicherten Auswahlen.
 | --- | --- |
 | Navigation | Manöver, Manöverdistanz, nächster Halt, Linienlänge, Reststrecke, Linienfortschritt, ETA, Prognose-Abweichung und Prognosesicherheit |
 | Fahrplan | Haltestelle, Ankunft, Abfahrt, Abweichung, Ingame-Zeit mit Sekunden, Status und Haltewunsch auf Tasten, Einzelpanel und Fullpanel |
-| Fahrzeug | Geschwindigkeit, Tempolimit, Leistung oder Fahrtverbrauch, Akkustand, Gang, Zündung, Feststellbremse, Blinker und Warnblinker |
+| Fahrzeug | Geschwindigkeit, Tempolimit, Leistung oder Fahrtverbrauch, Akkustand, Gang, Zündung, Feststell- und Haltestellenbremse, Blinker und Warnblinker |
 | Türen und Einstieg | Einzeltüren, Door All, Türfreigabe, automatisches Türschließen, Kneeling, Auto-Kneeling und Rollstuhlrampe |
 | Klima | Klima Ein/Aus, Heizen/Kühlen, hintere Klima, Umluft, vordere Umluft, automatische Ventilation, Temperatur und Luftverteilung |
 | Licht und Fahrt | Außenbeleuchtung, Fahrgastraumlicht, Scheibenwischer, Retarder und Sonnenblende |
@@ -65,6 +65,10 @@ Profilzuordnungen oder gespeicherten Auswahlen.
 
 Anzeigen ändern sich nur nach bestätigter Rückmeldung aus dem Spiel. Unbekannte
 oder unsichere Zustände bleiben neutral.
+
+Verwandte Funktionen sind in gemeinsamen Actions mit Auswahl im Property
+Inspector gebündelt. Alle 50 technischen Action-UUIDs bleiben erhalten;
+bestehende Profile und bereits belegte Tasten funktionieren deshalb weiter.
 
 ### Navigation
 
@@ -112,10 +116,18 @@ Private Angaben vor dem Anhängen entfernen.
 
 ### Kompatibilität und Grenzen
 
-- Vollständig bestätigte Fahrzeugabdeckung besteht für den viertürigen
-  MB eCitaro / MB eCityBus 18 m.
-- Andere Fahrzeuge können abweichende Telemetrie-, Tasten- oder Zustandsnamen
-  verwenden; fehlende Werte bleiben neutral.
+- Fahrzeugbezogene Zuordnungen beruhen auf vollständig erfasster offizieller
+  Telemetrie für MB eCitaro / eCityBus, Ebusco 2.2, Solaris Urbino,
+  MAN Lion's City Doppeldecker, Scania Citywide LF sowie VDL Citea LLE 120 und
+  LLE 127. Funktionen werden pro Fahrzeug nur bei bestätigten Events und
+  Zuständen angeboten.
+- Beim Scania sind nur die tatsächlich steuerbare vordere Tür und das manuelle
+  Kneeling verfügbar; hintere Türen und Auto-Kneeling bleiben blockiert.
+- Der VDL meldet keine numerische Fahrgastraumtemperatur und bestätigt nur eine
+  binäre Fahrgastraumbeleuchtung. Diese Anzeigen bleiben entsprechend neutral
+  beziehungsweise auf Aus/Ein begrenzt.
+- Andere oder kleinere Fahrzeugvarianten können abweichende Telemetrie-,
+  Tasten- oder Zustandsnamen verwenden; fehlende Werte bleiben neutral.
 - Navigation bleibt experimentell und kann bei unbekannter oder unvollständiger
   Routengeometrie Werte bewusst ausblenden.
 - Lüftergeschwindigkeit ist am bestätigten Fahrzeug nur lesbar. Bedienung wird
@@ -138,8 +150,8 @@ zugewiesen werden.
 
 ### Download
 
-- Installer: https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/download/v2.16.0/Rhao92-The-Bus-Stream-Deck-Plugin-2.16.0.21.zip
-- Release notes: https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/tag/v2.16.0
+- Installer: https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/download/v2.17.0/Rhao92-The-Bus-Stream-Deck-Plugin-2.17.0.0.zip
+- Release notes: https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/releases/tag/v2.17.0
 - Report a bug: https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/issues/new?template=bug_report.md
 - Suggest a feature: https://github.com/Rhao92/Rhao92-The-Bus-Stream-Deck-Plugin/issues/new?template=feature_request.md
 
@@ -174,7 +186,7 @@ profile assignments, or saved selections.
 | --- | --- |
 | Navigation | Maneuver, maneuver distance, next stop, line length, remaining distance, line progress, ETA, predicted schedule delta, and prediction confidence |
 | Timetable | Stop, arrival, departure, schedule delta, in-game time with seconds, status, and stop request on keys, a single panel, and the Fullpanel |
-| Vehicle | Speed, speed limit, power or trip consumption, battery, gear, ignition, parking brake, indicators, and hazard lights |
+| Vehicle | Speed, speed limit, power or trip consumption, battery, gear, ignition, parking and stop brake, indicators, and hazard lights |
 | Doors and access | Individual doors, Door All, door clearance, automatic door closing, kneeling, automatic kneeling, and wheelchair ramp |
 | Climate | Climate on/off, heating/cooling, rear climate, circulation, front circulation, automatic ventilation, temperature, and airflow |
 | Lighting and driving | Exterior lighting, passenger lighting, wipers, retarder, and sun blind |
@@ -182,6 +194,10 @@ profile assignments, or saved selections.
 
 Displays change only after confirmed game feedback. Unknown or uncertain states
 remain neutral.
+
+Related functions are consolidated into shared actions with Property Inspector
+selection. All 50 technical action UUIDs remain available, so existing profiles
+and assigned keys continue to work.
 
 ### Navigation
 
@@ -226,10 +242,18 @@ before attaching it.
 
 ### Compatibility and limitations
 
-- Fully confirmed vehicle coverage currently applies to the four-door
-  18-metre MB eCitaro / MB eCityBus.
-- Other vehicles may use different telemetry, button, or state names; missing
-  values remain neutral.
+- Vehicle-specific mappings are based on complete official telemetry captures
+  for the MB eCitaro / eCityBus, Ebusco 2.2, Solaris Urbino, MAN Lion's City
+  double-decker, Scania Citywide LF, and VDL Citea LLE 120 and LLE 127.
+  Features are enabled per vehicle only when real events and feedback are
+  confirmed.
+- On the Scania, only the genuinely controllable front door and manual
+  kneeling are available; rear doors and automatic kneeling remain blocked.
+- The VDL provides no numeric passenger-compartment temperature and confirms
+  only binary passenger lighting. Those displays therefore remain neutral or
+  limited to off/on.
+- Other or smaller vehicle variants may use different telemetry, button, or
+  state names; missing values remain neutral.
 - Navigation remains experimental and may deliberately hide values when route
   geometry is unknown or incomplete.
 - Fan speed is read-only on the confirmed vehicle. Control is enabled only when

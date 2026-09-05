@@ -1,39 +1,33 @@
-import { action, KeyDownEvent } from "@elgato/streamdeck";
+import { action, KeyAction, KeyDownEvent } from "@elgato/streamdeck";
 import { BaseAnimationAction } from "../base/base-animation-action";
-import { BaseToggleAction } from "../base/base-toggle-action";
+import { BaseConfigurableKeyAction } from "../base/base-configurable-key-action";
 import { DisplayModel } from "../base/base-display-action";
 import { AnimationFrame } from "../core/animation-clock";
 import {
   IndicatorPosition,
-  normalizeControlBoolean,
   readLampPhase,
   readIndicatorState,
   readWarningLightsState
 } from "../core/driving-controls";
 import { TelemetryClient, TelemetrySnapshot } from "../core/telemetry";
+import {
+  readParkingBrakeState,
+  readStopBrakeState
+} from "../core/vehicle-controls";
+import { resolveStopBrakeEvent } from "../core/vehicle-events";
 
 const PARKING_BRAKE_EVENT = "FixingBrake";
 const WARNING_LIGHT_EVENT = "ToggleWarningLights";
 
 function readParkingBrake(
-  telemetry: TelemetryClient,
+  _telemetry: TelemetryClient,
   snapshot: TelemetrySnapshot
 ): boolean | undefined {
   if (!snapshot.connected || !snapshot.vehicle) {
     return undefined;
   }
 
-  const buttonState = telemetry.getButton(
-    snapshot.vehicle,
-    "Parking Brake"
-  )?.State;
-  const fromButton = normalizeControlBoolean(buttonState);
-
-  if (fromButton !== undefined) {
-    return fromButton;
-  }
-
-  return normalizeControlBoolean(snapshot.vehicle.FixingBrake);
+  return readParkingBrakeState(snapshot.vehicle);
 }
 
 function readWarningLights(
@@ -58,19 +52,89 @@ function readIndicator(
   return readIndicatorState(snapshot.vehicle);
 }
 
+type BrakeMode = "parking" | "stop";
+
+const BRAKE_MODES: readonly BrakeMode[] = ["parking", "stop"];
+const BRAKE_FOLDERS: Record<BrakeMode, string> = {
+  parking: "parking-brake",
+  stop: "stop-brake"
+};
+
+/**
+ * Die stabile Feststellbremsen-UUID wird als konfigurierbare Bremsen-Action
+ * weiterverwendet. Der Standard bleibt Feststellbremse, damit vorhandene
+ * Profile ohne Settings unverändert funktionieren.
+ */
 @action({ UUID: "de.rhao92.thebus-telemetry-interface.parking-brake" })
-export class ParkingBrakeAction extends BaseToggleAction {
-  protected override readToggleState(
-    snapshot: TelemetrySnapshot
-  ): boolean | undefined {
-    return readParkingBrake(this.telemetry, snapshot);
+export class ParkingBrakeAction
+  extends BaseConfigurableKeyAction<BrakeMode> {
+  protected readonly defaultMode: BrakeMode = "parking";
+
+  protected normalizeMode(mode: unknown): BrakeMode {
+    return BRAKE_MODES.includes(mode as BrakeMode)
+      ? mode as BrakeMode
+      : this.defaultMode;
   }
 
-  protected override getToggleEventName(
-    _snapshot: TelemetrySnapshot,
-    _active: boolean
-  ): string {
-    return PARKING_BRAKE_EVENT;
+  protected createModeDisplayModel(
+    mode: BrakeMode,
+    snapshot: TelemetrySnapshot,
+    _animationFrame: AnimationFrame
+  ): DisplayModel {
+    const active = this.readBrakeState(mode, snapshot);
+    const state = active === undefined
+      ? "offline"
+      : active
+        ? "active"
+        : "inactive";
+
+    return {
+      state: 0,
+      title: null,
+      image: `imgs/actions/${BRAKE_FOLDERS[mode]}/${state}.png`
+    };
+  }
+
+  protected async handleModeKeyDown(
+    mode: BrakeMode,
+    snapshot: TelemetrySnapshot,
+    _key: KeyAction
+  ): Promise<void> {
+    const active = this.readBrakeState(mode, snapshot);
+
+    if (active === undefined || !snapshot.vehicleId) {
+      return;
+    }
+
+    const eventName = mode === "parking"
+      ? PARKING_BRAKE_EVENT
+      : resolveStopBrakeEvent(snapshot.vehicle, active);
+
+    if (!eventName) {
+      return;
+    }
+
+    const sent = await this.sendEvent(eventName);
+
+    if (!sent) {
+      this.logWarning(`Event \"${eventName}\" konnte nicht gesendet werden.`);
+      return;
+    }
+
+    this.refreshTelemetrySoon();
+  }
+
+  private readBrakeState(
+    mode: BrakeMode,
+    snapshot: TelemetrySnapshot
+  ): boolean | undefined {
+    if (!snapshot.connected || !snapshot.vehicle) {
+      return undefined;
+    }
+
+    return mode === "parking"
+      ? readParkingBrake(this.telemetry, snapshot)
+      : readStopBrakeState(snapshot.vehicle);
   }
 }
 

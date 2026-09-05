@@ -4,7 +4,8 @@ export type TimetableKind =
   | "departure"
   | "delta"
   | "ingame"
-  | "status";
+  | "status"
+  | "stop-request";
 
 export type FullpanelLayer = "timetable" | "vehicle" | "navigation";
 
@@ -49,7 +50,8 @@ export const TIMETABLE_KINDS = new Set<TimetableKind>([
   "departure",
   "delta",
   "ingame",
-  "status"
+  "status",
+  "stop-request"
 ]);
 
 export function normalizeTimetableKind(value: unknown): TimetableKind {

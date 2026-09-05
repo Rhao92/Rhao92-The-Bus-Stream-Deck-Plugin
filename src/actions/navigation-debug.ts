@@ -37,7 +37,7 @@ function debugKey(label: string, value: string, color: string): string {
   <circle cx="100" cy="88" r="15" fill="#02070b" stroke="${color}" stroke-width="6" filter="url(#glow)"/>
   <text x="72" y="119" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="${valueSize}" font-weight="900" fill="#fff" filter="url(#glow)">${value}</text>
   <text x="72" y="132" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="9" font-weight="800" fill="${color}" opacity=".9">${label}</text>
-  <text x="135" y="136" text-anchor="end" font-family="Arial,Helvetica,sans-serif" font-size="4" font-weight="700" fill="#fff" fill-opacity=".22">2.16</text>
+  <text x="135" y="136" text-anchor="end" font-family="Arial,Helvetica,sans-serif" font-size="4" font-weight="700" fill="#fff" fill-opacity=".22">2.17</text>
   </svg>`);
 }
 

@@ -59,7 +59,7 @@ const expectedPanelText = new Map([
 
 for (const [kind, expected] of expectedPanelText) {
   const svg = svgFromDataUri(renderSinglePanel(baseView, kind));
-  assert.match(svg, />2\.16<\/text>/);
+  assert.match(svg, />2\.17<\/text>/);
   assert.ok(svg.includes(expected), `${kind} enthält ${expected}`);
 }
 
@@ -219,7 +219,7 @@ const stopButton = svgFromDataUri(renderTimetableKeypad(baseView, "stop"));
 assert.match(stopButton, /width="144" height="144"/);
 assert.match(stopButton, /Spandauer Str\.\//);
 assert.match(stopButton, /Marienkirche/);
-assert.match(stopButton, />2\.16<\/text>/);
+assert.match(stopButton, />2\.17<\/text>/);
 
 for (const [kind, expected] of expectedButtonText) {
   const svg = svgFromDataUri(renderTimetableKeypad(baseView, kind));
@@ -261,6 +261,22 @@ assert.notEqual(requestedStatusButtonDim, requestedStatusButtonBright);
 assert.match(requestedStatusButtonBright, />STOP</);
 assert.match(requestedStatusButtonBright, /fill="#d8172b"/);
 assert.match(requestedStatusButtonBright, /stroke="#78d83a"/);
+
+const dedicatedStopRequestInactive = svgFromDataUri(renderTimetableKeypad({
+  ...baseView,
+  stopRequest: false,
+}, "stop-request", true));
+const dedicatedStopRequestDim = svgFromDataUri(renderTimetableKeypad({
+  ...baseView,
+  stopRequest: true,
+}, "stop-request", false));
+const dedicatedStopRequestBright = svgFromDataUri(renderTimetableKeypad({
+  ...baseView,
+  stopRequest: true,
+}, "stop-request", true));
+assert.match(dedicatedStopRequestInactive, />STOP</);
+assert.notEqual(dedicatedStopRequestDim, dedicatedStopRequestBright);
+assert.match(dedicatedStopRequestBright, /fill="#d8172b"/);
 
 const offlineButton = svgFromDataUri(renderTimetableKeypad({
   ...baseView,

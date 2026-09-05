@@ -25,6 +25,10 @@ const navigationPropertyInspector = await readFile(
   new URL("property-inspector/navigation.html", pluginRoot),
   "utf8",
 );
+const vehiclePropertyInspector = await readFile(
+  new URL("property-inspector/vehicle.html", pluginRoot),
+  "utf8",
+);
 const pluginSource = await readFile(new URL("src/plugin.ts", root), "utf8");
 const fullpanelHubSource = await readFile(
   new URL("src/fullpanel/view-model-hub.ts", root),
@@ -44,13 +48,13 @@ const retiredImageActions = new Set([
 ]);
 
 assert.equal(packageJson.name, "rhao92-the-bus-telemetry-interface");
-assert.equal(packageJson.version, "2.16.0");
+assert.equal(packageJson.version, "2.17.0");
 assert.equal(packageLock.version, packageJson.version);
 assert.equal(packageLock.packages[""].version, packageJson.version);
 assert.equal(manifest.Name, "Rhao92's The Bus Stream Deck Plugin");
 assert.equal(manifest.Category, manifest.Name);
 assert.equal(manifest.Author, "Rhao92");
-assert.equal(manifest.Version, "2.16.0.21");
+assert.equal(manifest.Version, "2.17.0.0");
 assert.equal(manifest.UUID, "de.rhao92.thebus-telemetry-interface");
 assert.equal(manifest.Actions.length, 50);
 assert.doesNotMatch(
@@ -92,25 +96,15 @@ assert.deepEqual(visibleNames, [
   "Fullpanel",
   "Fahrplan · Einzelpanel",
   "Fahrplan · Button",
-  "Fahrplan · Haltewunsch",
   "Navigation",
   "Navigation · Debug speichern",
-  "Fahrzeug · Geschwindigkeit",
-  "Fahrzeug · Tempolimit",
-  "Fahrzeug · Leistung",
-  "Fahrzeug · Akku",
+  "Fahrzeug · Anzeige",
   "Klima · Steuerung",
   "Klima · Regler",
-  "Türen · Türsteuerung",
-  "Türen · Türfreigabe",
-  "Türen · Automatisches Türschließen",
-  "Fahrt · Gangwahl",
-  "Fahrt · Blinker",
+  "Türen · Steuerung",
+  "Fahrt · Steuerung",
   "Fahrt · Zündung",
-  "Fahrt · Feststellbremse",
-  "Fahrt · Retarder",
   "Fahrt · Sonnenblende",
-  "Fahrt · Scheibenwischer",
   "Einstieg · Kneeling",
   "Einstieg · Rollstuhlrampe",
   "Licht · Außenbeleuchtung",
@@ -124,12 +118,14 @@ for (const [uuid, controller, inspector] of [
   ["de.rhao92.thebus-telemetry-interface.timetable-button", "Keypad", "property-inspector/timetable.html"],
   ["de.rhao92.thebus-telemetry-interface.navigation-maneuver", "Keypad", "property-inspector/navigation.html"],
   ["de.rhao92.thebus-telemetry-interface.navigation-debug-capture", "Keypad", undefined],
-  ["de.rhao92.thebus-telemetry-interface.vehicle-speed", "Keypad", undefined],
+  ["de.rhao92.thebus-telemetry-interface.vehicle-speed", "Keypad", "property-inspector/vehicle.html"],
   ["de.rhao92.thebus-telemetry-interface.vehicle-speed-limit", "Keypad", undefined],
   ["de.rhao92.thebus-telemetry-interface.vehicle-power", "Keypad", undefined],
   ["de.rhao92.thebus-telemetry-interface.vehicle-battery", "Keypad", undefined],
   ["de.rhao92.thebus-telemetry-interface.hvac-control", "Keypad", "property-inspector/hvac.html"],
   ["de.rhao92.thebus-telemetry-interface.hvac-dial", "Encoder", "property-inspector/hvac.html"],
+  ["de.rhao92.thebus-telemetry-interface.gear-selector", "Keypad", "property-inspector.html"],
+  ["de.rhao92.thebus-telemetry-interface.parking-brake", "Keypad", "property-inspector.html"],
   ["de.rhao92.thebus-telemetry-interface.retarder-control", "Keypad", "property-inspector.html"],
   ["de.rhao92.thebus-telemetry-interface.sun-blind", "Keypad", undefined],
   ["de.rhao92.thebus-telemetry-interface.wiper-control", "Keypad", "property-inspector.html"],
@@ -142,7 +138,7 @@ for (const [uuid, controller, inspector] of [
   assert.equal(entry.PropertyInspectorPath, inspector);
 }
 
-for (const kind of ["stop", "arrival", "departure", "delta", "ingame", "status"]) {
+for (const kind of ["stop", "arrival", "departure", "delta", "ingame", "status", "stop-request"]) {
   assert.match(propertyInspector, new RegExp(`value="${kind}"`));
 }
 assert.match(propertyInspector, /event: "setSettings"/);
@@ -151,6 +147,13 @@ assert.ok(inspectorScript);
 assert.doesNotThrow(() => new Function(inspectorScript));
 assert.doesNotMatch(generalPropertyInspector, /touch-display|key-display/);
 for (const mode of [
+  "clearance", "automatic-closing",
+  "indicator-left", "indicator-right", "indicator-warning",
+  "brake-parking", "brake-stop",
+  "retarder-increase", "retarder-decrease", "retarder-off",
+  "retarder-level-1", "retarder-level-5",
+  "wiper-increase", "wiper-decrease",
+  "parking", "stop",
   "increase", "decrease", "off", "level-1", "level-5",
   "switch-up", "switch-down", "daytime", "parking", "headlights",
   "high-beam", "front-fog", "rear-fog", "atron", "take-cash",
@@ -177,6 +180,17 @@ assert.match(navigationPropertyInspector, /event: "getSettings"/);
 assert.match(navigationPropertyInspector, /didReceiveSettings/);
 assert.match(navigationPropertyInspector, /action: actionUuid/);
 assert.match(navigationPropertyInspector, /pendingKind/);
+for (const kind of ["speed", "limit", "power", "battery"]) {
+  assert.match(vehiclePropertyInspector, new RegExp(`value="${kind}"`));
+}
+assert.match(vehiclePropertyInspector, /event: "setSettings"/);
+assert.match(vehiclePropertyInspector, /event: "getSettings"/);
+assert.match(vehiclePropertyInspector, /didReceiveSettings/);
+assert.match(vehiclePropertyInspector, /action: actionUuid/);
+assert.match(vehiclePropertyInspector, /pendingKind/);
+const vehicleInspectorScript = vehiclePropertyInspector.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+assert.ok(vehicleInspectorScript);
+assert.doesNotThrow(() => new Function(vehicleInspectorScript));
 const hvacPropertyInspector = await readFile(
   new URL("property-inspector/hvac.html", pluginRoot),
   "utf8",
@@ -262,7 +276,7 @@ for (const marker of [
   "WindowShadeDown", "WindowShadeUp", "WiperDown", "WiperUp",
   "LightSwitchDown", "LightSwitchUp", "ToggleTravellerLights",
   "Select Boardcomputer", "Coins5", "Coins800", "Take Cash Money",
-  "NUR ANZEIGE", "2.16", "Navigation Blackbox",
+  "NUR ANZEIGE", "2.17", "Navigation Blackbox",
 ]) {
   assert.match(bundle, new RegExp(marker));
 }

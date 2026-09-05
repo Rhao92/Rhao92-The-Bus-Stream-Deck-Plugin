@@ -38,7 +38,7 @@ function frame(content: string, color: string, title = translateUi("climate")): 
   <rect x="4" y="4" width="136" height="136" rx="19" fill="#061018" stroke="${color}" stroke-width="3" filter="url(#hvacGlow)"/>
   <rect x="8" y="8" width="128" height="128" rx="16" fill="#02070b" fill-opacity=".84" stroke="#fff" stroke-opacity=".07"/>
   ${content}
-  <text x="135" y="136" text-anchor="end" font-family="Arial,Helvetica,sans-serif" font-size="4" font-weight="700" fill="#fff" fill-opacity=".22">2.16</text>
+  <text x="135" y="136" text-anchor="end" font-family="Arial,Helvetica,sans-serif" font-size="4" font-weight="700" fill="#fff" fill-opacity=".22">2.17</text>
   </svg>`;
 }
 
@@ -183,7 +183,7 @@ export function renderHvacKey(mode: HvacMode, state: HvacState): string {
   }
 
   if (mode === "temperature-up" || mode === "temperature-down") {
-    if (!state.temperatureAvailable) {
+    if (!state.temperatureControlAvailable) {
       return unavailable(translateUi("temperature", language), `<text x="72" y="84" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="48" font-weight="900" fill="${COLORS.unavailable}">±1°</text>`);
     }
 
@@ -252,7 +252,7 @@ function dialFrame(label: string, value: string, detail: string, color: string):
 export function renderHvacDial(mode: HvacDialMode, state: HvacState): string {
   const language = getDisplayLanguage();
   if (mode === "temperature") {
-    const available = state.temperatureAvailable && state.temperatureControlAvailable;
+    const available = state.temperatureControlAvailable;
     return dialFrame(
       translateUi("temperature", language),
       temperature(state.temperatureC),
@@ -263,7 +263,7 @@ export function renderHvacDial(mode: HvacDialMode, state: HvacState): string {
 
   if (mode === "fan-speed") {
     const readable = state.fanPercent !== undefined;
-    const controllable = readable && state.fanControlAvailable;
+    const controllable = state.fanControlAvailable;
     return dialFrame(
       translateUi("fan_speed", language),
       state.fanStagePercent === undefined ? "--" : `${Math.round(state.fanStagePercent)} %`,

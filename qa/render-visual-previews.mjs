@@ -10,7 +10,8 @@ try {
   // vollständig prüfbar und werden weiterhin erzeugt.
 }
 
-const outputDirectory = process.argv[2] ?? "/tmp/rhao92-the-bus-stream-deck-plugin-2.16.0-visual";
+const outputDirectory = process.argv[2] ?? "/tmp/rhao92-the-bus-stream-deck-plugin-2.17.0-visual";
+const previewLanguage = process.argv[3] === "en" ? "en" : "de";
 await mkdir(outputDirectory, { recursive: true });
 
 const sourceUrl = (source) =>
@@ -22,6 +23,8 @@ const localizationSource = await readFile(
   "utf8",
 );
 const localizationModule = sourceUrl(localizationSource);
+const localization = await import(localizationModule);
+localization.setDisplayLanguage(previewLanguage);
 
 const rendererSource = (await readFile(
   new URL("../src/fullpanel/renderers.ts", import.meta.url),
@@ -82,7 +85,7 @@ const navigationJavaScript = ts.transpileModule(navigationTypeScript, {
 const navigation = await importSource(navigationJavaScript);
 
 const liveView = {
-  language: "de",
+  language: previewLanguage,
   runtimeState: "mission-ready",
   online: true,
   inVehicle: true,
@@ -93,7 +96,7 @@ const liveView = {
   deltaText: "−1:02",
   deltaSeconds: -62,
   deltaSource: "MISSION",
-  status: "VERFRÜHT",
+  status: previewLanguage === "en" ? "EARLY" : "VERFRÜHT",
   ingameTime: "15:16:58",
   stopRequest: true,
   speed: 50,
@@ -102,11 +105,11 @@ const liveView = {
   speedLevel: "normal",
   gear: "D",
   batteryPercent: 78,
-  doors: "GESCHLOSSEN",
-  parkingBrake: "AUS",
+  doors: previewLanguage === "en" ? "CLOSED" : "GESCHLOSSEN",
+  parkingBrake: previewLanguage === "en" ? "OFF" : "AUS",
   autoKneeling: false,
   mechanicalKneeling: "READY",
-  power: "18,7 kWh/100 km",
+  power: previewLanguage === "en" ? "18.7 kWh/100 km" : "18,7 kWh/100 km",
   powerSource: "average-consumption",
 };
 
@@ -170,15 +173,15 @@ await Promise.all([
   saveSvg("14-fullpanel-vehicle-lowering", fullpanel.renderFullpanel({
     ...liveView,
     speed: 0,
-    mechanicalKneeling: "SENKT AB",
-    power: "19,1 kWh/100 km",
+    mechanicalKneeling: previewLanguage === "en" ? "LOWERING" : "SENKT AB",
+    power: previewLanguage === "en" ? "19.1 kWh/100 km" : "19,1 kWh/100 km",
     powerSource: "average-consumption",
   }, "vehicle", false)),
   saveSvg("15-fullpanel-vehicle-active", fullpanel.renderFullpanel({
     ...liveView,
     speed: 0,
-    mechanicalKneeling: "AKTIV",
-    power: "19,1 kWh/100 km",
+    mechanicalKneeling: previewLanguage === "en" ? "ACTIVE" : "AKTIV",
+    power: previewLanguage === "en" ? "19.1 kWh/100 km" : "19,1 kWh/100 km",
     powerSource: "average-consumption",
   }, "vehicle", false)),
   saveSvg("16-fullpanel-navigation", fullpanel.renderFullpanel(

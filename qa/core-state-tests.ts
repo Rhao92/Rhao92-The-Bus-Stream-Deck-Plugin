@@ -4,15 +4,43 @@ import {
   readIndicatorState,
   readWarningLightsState
 } from "../src/core/driving-controls";
-import { GearStateResolver } from "../src/core/gear";
+import { GearStateResolver, resolveGearCommand } from "../src/core/gear";
 import {
   KneelingMotionTracker,
+  readKneelingButtonState,
   readKneelingState,
   readKneelingWheelMetric
 } from "../src/core/kneeling";
 import { readRampState } from "../src/core/ramp";
-import { doorAllCommandIndexes, summarizeDoorStates } from "../src/core/doors";
-import { readDoorClearanceState } from "../src/core/vehicle-controls";
+import {
+  doorAllCommandIndexes,
+  readAvailableDoorStates,
+  summarizeDoorStates
+} from "../src/core/doors";
+import {
+  readAutomaticDoorClosingState,
+  readAutomaticKneelingState,
+  readDoorClearanceState,
+  readParkingBrakeState,
+  readPassengerLightState,
+  readStopBrakeState
+} from "../src/core/vehicle-controls";
+import {
+  passengerLightTargetRequiresPressRelease,
+  manualKneelingRequiresHold,
+  resolveAutomaticDoorClosingEvent,
+  resolveAutomaticKneelingEvent,
+  resolveDoorToggleEvent,
+  resolveManualKneelingEvent,
+  resolvePassengerLightOffEvent,
+  resolvePassengerLightLevelEvent,
+  resolvePassengerLightTargetEventBatches,
+  resolvePassengerLightTargetEvents,
+  resolvePassengerLightToggleTarget,
+  resolvePassengerLightToggleEvent,
+  resolveStopBrakeEvent,
+  usesCyclicPassengerLightControl
+} from "../src/core/vehicle-events";
 import { isVehicleStationary, readVehicleSpeedKmh } from "../src/core/vehicle-motion";
 import { runtimeDisplayOverride } from "../src/core/runtime-display";
 import {
@@ -50,6 +78,8 @@ import {
   renderTicketControlKey,
   renderWiperKey
 } from "../src/vehicle/extended-control-renderer";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 function check(condition: unknown, message: string): void {
   if (!condition) {
@@ -79,6 +109,422 @@ function wheels(differences: number[]): VehicleTelemetry["Wheels"] {
 function renderedSvg(image: string): string {
   return Buffer.from(image.split(",", 2)[1] ?? "", "base64").toString("utf8");
 }
+
+function telemetryFixture(name: string): VehicleTelemetry {
+  const raw = JSON.parse(readFileSync(
+    resolve(process.cwd(), "qa", "fixtures", "vehicle-telemetry", name),
+    "utf8"
+  )) as {
+    identity?: {
+      actorClass?: string;
+      vehicleModel?: string;
+      inputIdentifier?: string;
+    };
+    buttons?: Array<{
+      name?: string;
+      actions?: string[];
+      declaredStates?: string[];
+      observedStates?: unknown[];
+      observedValues?: unknown[];
+    }>;
+    lamps?: Array<{
+      name?: string;
+      observedValues?: unknown[];
+    }>;
+  };
+
+  return vehicle({
+    ActorName: raw.identity?.actorClass,
+    VehicleModel: raw.identity?.vehicleModel,
+    InputIdentifier: raw.identity?.inputIdentifier,
+    Buttons: (raw.buttons ?? []).map((button) => ({
+      Name: button.name,
+      Actions: button.actions,
+      States: button.declaredStates,
+      State: button.observedStates?.[0],
+      Value: button.observedValues?.[0]
+    })),
+    AllLamps: Object.fromEntries((raw.lamps ?? [])
+      .filter((lamp) => lamp.name)
+      .map((lamp) => [lamp.name as string, lamp.observedValues?.[0]]))
+  });
+}
+
+// VEHICLE-01: Fahrzeugabweichungen werden aus den vom jeweiligen Button
+// gemeldeten echten Actions aufgeloest. Die bisherigen Eventnamen bleiben als
+// Legacy-Fallback bestehen und werden durch neue Busse nicht ersetzt.
+const citeaEvents = vehicle({
+  Buttons: [
+    { Name: "Door 2", Actions: ["MiddleDoorOpenClose"] },
+    { Name: "Door 3", Actions: ["RearDoorOpenClose"] },
+    { Name: "Automatic Kneeling", Actions: ["Autokneeling"] },
+    { Name: "Lifting", Actions: ["LiftDown", "LiftUp"], State: "Secondary" },
+    {
+      Name: "InteriorLightLevel",
+      Actions: ["InteriorLightOff", "InteriorLightDimmed", "InteriorLightBright"]
+    }
+  ]
+});
+equal(resolveDoorToggleEvent(citeaEvents, 1), "MiddleDoorOpenClose", "Citea-Tuer 2 nutzt gemeldeten Event");
+equal(resolveDoorToggleEvent(citeaEvents, 2), "RearDoorOpenClose", "Citea-Tuer 3 nutzt gemeldeten Event");
+equal(resolveAutomaticKneelingEvent(citeaEvents), "Autokneeling", "Citea nutzt gemeldetes Auto-Kneeling");
+equal(resolveManualKneelingEvent(citeaEvents, true), "LiftDown", "Citea senkt ueber Lifting");
+equal(resolveManualKneelingEvent(citeaEvents, false), "LiftUp", "Citea hebt ueber Lifting");
+equal(readKneelingButtonState(citeaEvents), true, "Lifting-Secondary bestaetigt abgesenkten Zustand");
+equal(resolvePassengerLightLevelEvent(citeaEvents, "dim"), "InteriorLightDimmed", "Unbekanntes Legacy-Fahrzeug behaelt gemeldetes Dimm-Event");
+
+const ebuscoEvents = vehicle({
+  Buttons: [
+    { Name: "Automatic Door Closing", Actions: ["ToggleAutoclose"], State: "Secondary" },
+    { Name: "Automatic Kneeling", Actions: ["toggleAutoKneeling"], State: "Secondary" },
+    { Name: "Lifting", Actions: ["LiftDown", "LiftUp"], State: "Primary" }
+  ]
+});
+equal(resolveAutomaticDoorClosingEvent(ebuscoEvents), "ToggleAutoclose", "Ebusco nutzt gemeldete Tuerschliessautomatik");
+equal(readAutomaticDoorClosingState(ebuscoEvents), true, "Secondary bestaetigt aktive Tuerschliessautomatik");
+equal(resolveAutomaticKneelingEvent(ebuscoEvents), "toggleAutoKneeling", "Ebusco nutzt gemeldetes Auto-Kneeling");
+equal(readAutomaticKneelingState(ebuscoEvents), false, "Secondary bestaetigt deaktiviertes Auto-Kneeling");
+equal(resolveManualKneelingEvent(ebuscoEvents, true), "LiftDown", "Ebusco senkt ueber Lifting");
+
+const urbinoEvents = vehicle({
+  Buttons: [
+    { Name: "Automatic Door Closing", Actions: ["PreventRearAuto"], State: "Primary" },
+    { Name: "Automatic Kneeling", Actions: ["toggleAutoKneeling"], State: "Primary" },
+    { Name: "Interior Light Dim", Actions: ["INTLightDim"] },
+    { Name: "Interior Light Full", Actions: ["INTLightFull"] }
+  ]
+});
+equal(resolveAutomaticDoorClosingEvent(urbinoEvents), "PreventRearAuto", "Urbino nutzt gemeldete Tuerschliessautomatik");
+equal(readAutomaticDoorClosingState(urbinoEvents), false, "Primary bestaetigt inaktive Tuerschliessautomatik");
+equal(resolvePassengerLightLevelEvent(urbinoEvents, "dim"), "INTLightDim", "Urbino nutzt gemeldeten Dimm-Event");
+equal(resolvePassengerLightLevelEvent(urbinoEvents, "bright"), "INTLightFull", "Urbino nutzt gemeldeten Hell-Event");
+
+const manEvents = vehicle({
+  Buttons: [{ Name: "Door 1", Actions: ["DoorFrontOpenCloseButton"] }]
+});
+equal(resolveDoorToggleEvent(manEvents, 0), "DoorFrontOpenCloseButton", "MAN-Tuer 1 nutzt gemeldeten Button-Event");
+equal(resolveDoorToggleEvent(manEvents, 1), "DoorMiddleOpenClose", "MAN-Tuer 2 behaelt den live bestaetigten mittleren Event");
+equal(resolveDoorToggleEvent(manEvents, 2), "DoorRearOpenClose", "MAN-Tuer 3 behaelt den live bestaetigten hinteren Event");
+equal(resolveDoorToggleEvent(manEvents, 1), "DoorMiddleOpenClose", "Fehlende MAN-Tueraction behaelt Legacy-Fallback");
+
+const legacyEvents = vehicle();
+equal(resolveDoorToggleEvent(legacyEvents, 1), "DoorMiddleOpenClose", "Legacy-Tuername bleibt erhalten");
+equal(resolveAutomaticDoorClosingEvent(legacyEvents), "ToggleAutomaticRearDoorClosing", "Legacy-Tuerschliessautomatik bleibt erhalten");
+equal(resolveAutomaticKneelingEvent(legacyEvents), "Pedestrians", "Legacy-Auto-Kneeling bleibt erhalten");
+
+const capturedEcitaro = telemetryFixture("ecitaro.json");
+const capturedEbusco = telemetryFixture("ebusco-2-2.json");
+const capturedUrbino = telemetryFixture("urbino.json");
+const capturedMan = telemetryFixture("man.json");
+const capturedScania = telemetryFixture("scania.json");
+const capturedCitea120 = telemetryFixture("citea-lle-120-3d.json");
+const capturedCitea127 = telemetryFixture("citea.json");
+equal(resolveDoorToggleEvent(capturedEcitaro, 1), "DoorMiddleOpenClose", "eCitaro-Referenz behaelt Tuer 2");
+equal(resolveDoorToggleEvent(capturedEbusco, 3), "DoorFourthOpenClose", "Ebusco-Referenz nutzt Tuer 4");
+equal(resolveAutomaticDoorClosingEvent(capturedUrbino), "PreventRearAuto", "Urbino-Referenz nutzt PreventRearAuto");
+equal(resolveDoorToggleEvent(capturedUrbino, 1), "DoorFourthOpenClose", "Urbino-Tuer 2 korrigiert die live bestaetigte Vertauschung");
+equal(resolveDoorToggleEvent(capturedUrbino, 3), "DoorMiddleOpenClose", "Urbino-Tuer 4 korrigiert die live bestaetigte Vertauschung");
+equal(resolveDoorToggleEvent(capturedMan, 0), "DoorFrontOpenCloseButton", "MAN-Referenz nutzt eigenen Fronttuer-Event");
+equal(resolveDoorToggleEvent(capturedScania, 0), "DoorFrontOpenClose", "Scania-Referenz behaelt die funktionierende Fronttuer");
+equal(resolveDoorToggleEvent(capturedScania, 1), undefined, "Scania behauptet die nicht steuerbare Tuer 2 nicht mehr");
+equal(resolveDoorToggleEvent(capturedScania, 2), undefined, "Scania behauptet die nicht steuerbare Tuer 3 nicht mehr");
+equal(resolveDoorToggleEvent(capturedCitea120, 1), "MiddleDoorOpenClose", "Citea-120-Referenz nutzt eigenen Mitteltuer-Event");
+equal(resolveDoorToggleEvent(capturedCitea127, 1), "MiddleDoorOpenClose", "Citea-127-Referenz behebt Door-All-Tuer 2");
+equal(resolveManualKneelingEvent(capturedCitea127, true), "LiftDown", "Citea-127-Referenz nutzt LiftDown");
+equal(resolveAutomaticKneelingEvent(capturedEbusco), "toggleAutoKneeling", "Ebusco-Referenz nutzt eigenes Auto-Kneeling");
+equal(resolveAutomaticKneelingEvent(capturedScania), undefined, "Scania bietet kein bestaetigtes Auto-Kneeling an");
+equal(resolveManualKneelingEvent(capturedScania, true), "KneelDown", "Scania senkt über den live bestätigten Kneeling-Haltepfad");
+equal(resolveManualKneelingEvent(capturedScania, false), "KneelUp", "Scania hebt über den live bestätigten Kneeling-Haltepfad");
+equal(manualKneelingRequiresHold(capturedScania), true, "Scania-Kneeling verwendet Press-Hold-Release");
+equal(manualKneelingRequiresHold(capturedEcitaro), false, "eCitaro behält seinen bisherigen Klickpfad");
+equal(readStopBrakeState(capturedEcitaro), false, "eCitaro liest Haltestellenbremse Off direkt");
+equal(readStopBrakeState(capturedEbusco), false, "Ebusco Primary bedeutet Haltestellenbremse aus");
+equal(readStopBrakeState(capturedMan), false, "MAN Primary bedeutet Haltestellenbremse aus");
+equal(readStopBrakeState(capturedCitea127), false, "Citea Primary bedeutet Haltestellenbremse aus");
+equal(readStopBrakeState(vehicle({ AllLamps: { "LED Stop Brake": 1 } })), true, "Kontrolllampe bestaetigt Haltestellenbremse ohne Schalter");
+equal(readStopBrakeState(vehicle()), undefined, "Fehlende Haltestellenbremsen-Telemetrie bleibt unbekannt");
+equal(readParkingBrakeState(vehicle({ Buttons: [{ Name: "Parking Brake", State: true }] })), true, "Feststellbremse nutzt den bestätigten Buttonzustand");
+equal(readParkingBrakeState(vehicle({ FixingBrake: false })), false, "Feststellbremse nutzt die bestätigte Fahrzeugrückmeldung als Fallback");
+equal(readParkingBrakeState(vehicle()), undefined, "Fehlende Feststellbremsen-Telemetrie bleibt unbekannt");
+equal(resolveStopBrakeEvent(capturedEcitaro, false), "StopBrakeOnOff", "eCitaro nutzt den gemeldeten Toggle");
+equal(resolveStopBrakeEvent(capturedCitea127, false), "StopBrakeOnOff", "Citea nutzt den gemeldeten Toggle");
+equal(resolveStopBrakeEvent(capturedEbusco, false), "StopBrakeOn", "Ebusco schaltet gezielt ein");
+equal(resolveStopBrakeEvent(capturedEbusco, true), "StopBrakeOff", "Ebusco schaltet gezielt aus");
+equal(resolveStopBrakeEvent(capturedMan, false), "BusStopBrakeOn", "MAN schaltet gezielt ein");
+equal(resolveStopBrakeEvent(capturedMan, true), "BusStopBrakeOff", "MAN schaltet gezielt aus");
+equal(resolveStopBrakeEvent(capturedScania, false), undefined, "Scania ohne gemeldetes Event bleibt bei der Haltestellenbremse read-only");
+equal(usesCyclicPassengerLightControl(capturedEbusco), true, "Ebusco verwendet den echten zyklischen Lichttaster");
+equal(usesCyclicPassengerLightControl(capturedCitea127), false, "Citea wird nach aktuellem Live-Abgleich nur als binaeres Licht behandelt");
+equal(usesCyclicPassengerLightControl(capturedUrbino), true, "Urbino verwendet den echten zyklischen Lichttaster");
+equal(usesCyclicPassengerLightControl(capturedScania), true, "Scania verwendet den echten zyklischen Lichttaster");
+equal(usesCyclicPassengerLightControl(capturedMan), true, "MAN verwendet den echten zyklischen Lichttaster");
+equal(usesCyclicPassengerLightControl(capturedEcitaro), false, "eCitaro behaelt getrennte Lichtstufen");
+equal(resolvePassengerLightToggleEvent(capturedEbusco), "TogglePassengersLight", "Ebusco schaltet mit einem Druck genau eine reale Lichtstufe weiter");
+equal(resolvePassengerLightToggleEvent(capturedCitea127), "TogglePassengersLight", "Citea schaltet mit einem Druck den bestaetigten Ein-/Aus-Zustand");
+equal(resolvePassengerLightToggleEvent(capturedUrbino), "TogglePassengersLight", "Urbino schaltet mit einem Druck genau eine reale Lichtstufe weiter");
+equal(resolvePassengerLightToggleEvent(capturedScania), "TogglePassengersLight", "Scania schaltet mit einem Druck genau eine reale Lichtstufe weiter");
+equal(resolvePassengerLightToggleEvent(capturedMan), "TogglePassengersLight", "MAN schaltet mit einem Druck genau eine reale Lichtstufe weiter");
+equal(resolvePassengerLightOffEvent(capturedEbusco), "InteriorLightOff", "Ebusco besitzt einen live bestaetigten direkten Aus-Event");
+equal(resolvePassengerLightLevelEvent(capturedEbusco, "dim"), "InteriorLightDimmed", "Ebusco besitzt einen live bestaetigten direkten Dimm-Event");
+equal(resolvePassengerLightLevelEvent(capturedEbusco, "bright"), "InteriorLightBright", "Ebusco besitzt einen live bestaetigten direkten Hell-Event");
+equal(passengerLightTargetRequiresPressRelease(capturedEbusco), true, "Ebusco-Lichtziele verwenden den live bestaetigten Press-Release-Pfad");
+equal(resolvePassengerLightOffEvent(capturedCitea127), "InteriorLightOff", "Citea besitzt einen live bestaetigten direkten Aus-Event");
+equal(resolvePassengerLightLevelEvent(capturedCitea127, "dim"), undefined, "Citea behauptet keine getrennte Dimmstufe");
+equal(resolvePassengerLightLevelEvent(capturedCitea127, "bright"), undefined, "Citea behauptet den gelisteten, aber wirkungslosen Hell-Event nicht");
+equal(passengerLightTargetRequiresPressRelease(capturedCitea127), true, "Citea-Aus verwendet den live bestaetigten Press-Release-Pfad");
+equal(resolvePassengerLightOffEvent(capturedUrbino), "TogglePassengersLight", "Urbino erreicht Aus sicher ueber den bestaetigten Hauptzustand und Toggle");
+equal(resolvePassengerLightLevelEvent(capturedUrbino, "dim"), "INTLightDim", "Urbino besitzt einen live bestaetigten direkten Dimm-Event");
+equal(resolvePassengerLightLevelEvent(capturedUrbino, "bright"), "INTLightFull", "Urbino behaelt seinen vorhandenen direkten Hell-Event");
+equal(resolvePassengerLightLevelEvent(capturedScania, "dim"), undefined, "Scania behauptet keine separate Zielstufentaste");
+equal(resolvePassengerLightLevelEvent(capturedMan, "bright"), undefined, "MAN behauptet keine separate Zielstufentaste");
+equal(resolvePassengerLightLevelEvent(capturedEcitaro, "dim"), "InteriorLightDim", "eCitaro behaelt bewaehrte Helligkeitssteuerung");
+
+const manMixedLight = vehicle({
+  InputIdentifier: "MAN",
+  Buttons: [
+    {
+      Name: "InteriorLightLowerDeck",
+      State: "Dimmed",
+      Actions: ["LDPassengersLightUp", "LDPassengersLightDown", "TogglePassengersLight"]
+    },
+    {
+      Name: "InteriorLightUpperDeck",
+      State: "Off",
+      Actions: ["UDPassengersLightUp", "UDPassengersLightDown"]
+    }
+  ]
+});
+equal(JSON.stringify(resolvePassengerLightTargetEvents(manMixedLight, "off")), '["LDPassengersLightDown"]', "MAN schaltet beide Decks gezielt auf Aus");
+equal(JSON.stringify(resolvePassengerLightTargetEvents(manMixedLight, "dim")), '["UDPassengersLightUp"]', "MAN gleicht das Oberdeck gezielt auf Gedimmt an");
+equal(JSON.stringify(resolvePassengerLightTargetEvents(manMixedLight, "bright")), '["LDPassengersLightUp","UDPassengersLightUp","UDPassengersLightUp"]', "MAN schaltet beide Decks gezielt auf Hell");
+equal(JSON.stringify(resolvePassengerLightTargetEventBatches(vehicle({
+  InputIdentifier: "MAN",
+  Buttons: [
+    {
+      Name: "InteriorLightLowerDeck",
+      State: "Off",
+      Actions: ["LDPassengersLightUp", "LDPassengersLightDown"]
+    },
+    {
+      Name: "InteriorLightUpperDeck",
+      State: "Off",
+      Actions: ["UDPassengersLightUp", "UDPassengersLightDown"]
+    }
+  ]
+}), "bright")), '[["LDPassengersLightUp","UDPassengersLightUp"],["LDPassengersLightUp","UDPassengersLightUp"]]', "MAN koppelt Unter- und Oberdeck pro Helligkeitsstufe");
+equal(resolvePassengerLightToggleTarget(capturedMan, "bright"), "off", "MAN-Legacy-Umschalter schaltet beide hellen Decks aus");
+equal(resolvePassengerLightToggleTarget(capturedMan, "dim"), "off", "MAN-Legacy-Umschalter schaltet beide gedimmten Decks aus");
+equal(resolvePassengerLightToggleTarget(capturedMan, "on"), "off", "MAN-Legacy-Umschalter gleicht gemischte Decks auf Aus an");
+equal(resolvePassengerLightToggleTarget(capturedMan, "off"), "dim", "MAN-Legacy-Umschalter schaltet beide Decks gemeinsam gedimmt ein");
+equal(resolvePassengerLightToggleTarget(capturedEcitaro, "bright"), undefined, "eCitaro behaelt seinen bisherigen Toggle-Event");
+
+const scaniaMixedLight = vehicle({
+  InputIdentifier: "Scania",
+  Buttons: [
+    {
+      Name: "InteriorLightControl 1",
+      State: "Secondary",
+      Actions: ["LightingFrontInteriorDown", "LightingFrontInteriorUp", "TogglePassengersLight"]
+    },
+    {
+      Name: "InteriorLightControl 2",
+      State: "Primary",
+      Actions: ["LightingBackInteriorDown", "LightingBackInteriorUp"]
+    }
+  ]
+});
+equal(JSON.stringify(resolvePassengerLightTargetEvents(scaniaMixedLight, "off")), '["LightingFrontInteriorDown"]', "Scania gleicht den Frontbereich gezielt auf Aus an");
+equal(JSON.stringify(resolvePassengerLightTargetEvents(scaniaMixedLight, "dim")), '["LightingBackInteriorUp"]', "Scania gleicht den Heckbereich gezielt auf Gedimmt an");
+equal(JSON.stringify(resolvePassengerLightTargetEvents(scaniaMixedLight, "bright")), '["LightingFrontInteriorDown","LightingFrontInteriorDown","LightingBackInteriorDown"]', "Scania schaltet beide Bereiche gezielt auf Hell");
+
+equal(JSON.stringify(resolveGearCommand(capturedEbusco, "N", "D")), '["GearUp"]', "Ebusco schaltet live bestaetigt von N nach D mit GearUp");
+equal(JSON.stringify(resolveGearCommand(capturedEbusco, "N", "R")), '["GearDown"]', "Ebusco schaltet live bestaetigt von N nach R mit GearDown");
+equal(JSON.stringify(resolveGearCommand(capturedEbusco, "D", "N")), '["GearDown"]', "Ebusco schaltet live bestaetigt von D nach N mit GearDown");
+equal(JSON.stringify(resolveGearCommand(capturedEbusco, "R", "N")), '["GearUp"]', "Ebusco schaltet live bestaetigt von R nach N mit GearUp");
+equal(JSON.stringify(resolveGearCommand(capturedEbusco, "D", "R")), '["GearDown","GearDown"]', "Ebusco ueberbrueckt D nach R mit zwei bestaetigten GearDown-Events");
+equal(JSON.stringify(resolveGearCommand(capturedEbusco, "R", "D")), '["GearUp","GearUp"]', "Ebusco ueberbrueckt R nach D mit zwei bestaetigten GearUp-Events");
+equal(JSON.stringify(resolveGearCommand(capturedEcitaro, "D", "N")), '["SetGearN"]', "eCitaro behaelt direkte Gangwahl");
+
+equal(readPassengerLightState(vehicle({
+  InputIdentifier: "ebusco_2.2",
+  AllLamps: { "Light Passenger": 1 }
+})), "on", "Ebusco zeigt bestaetigt EIN ohne erfundene Helligkeitsstufe");
+equal(readPassengerLightState(vehicle({
+  InputIdentifier: "ebusco_2.2",
+  Buttons: [{ Name: "Interior Light", State: "Secondary" }],
+  AllLamps: { "Light Passenger": 0.1 }
+})), "dim", "Ebusco ordnet den live bestaetigten Secondary-Zustand Gedimmt zu");
+equal(readPassengerLightState(vehicle({
+  InputIdentifier: "ebusco_2.2",
+  Buttons: [{ Name: "Interior Light", State: "Tertiary" }],
+  AllLamps: { "Light Passenger": 1 }
+})), "bright", "Ebusco ordnet den live bestaetigten Tertiary-Zustand Hell zu");
+equal(readPassengerLightState(vehicle({
+  InputIdentifier: "urbino",
+  AllLamps: { "Passenger Lights": 0 }
+})), "off", "Urbino zeigt bestaetigt AUS");
+equal(readPassengerLightState(vehicle({
+  InputIdentifier: "urbino",
+  Buttons: [
+    { Name: "Interior Light", State: "Secondary" },
+    { Name: "Interior Light Dim", State: "Secondary" },
+    { Name: "Interior Light Full", State: "Primary" }
+  ],
+  AllLamps: { "Passenger Lights": 1 }
+})), "dim", "Urbino ordnet den live bestaetigten Dimm-Button Gedimmt zu");
+equal(readPassengerLightState(vehicle({
+  InputIdentifier: "urbino",
+  Buttons: [
+    { Name: "Interior Light", State: "Secondary" },
+    { Name: "Interior Light Dim", State: "Primary" },
+    { Name: "Interior Light Full", State: "Secondary" }
+  ],
+  AllLamps: { "Passenger Lights": 1 }
+})), "bright", "Urbino ordnet den live bestaetigten Full-Button Hell zu");
+equal(readPassengerLightState(vehicle({
+  InputIdentifier: "Scania",
+  AllLamps: { InteriorFront: 0, InteriorMiddle: 1, InteriorRear: 0 }
+})), "on", "Scania fasst echte Bereichslampen nur binaer zusammen");
+equal(readPassengerLightState(vehicle({
+  InputIdentifier: "Scania",
+  Buttons: [
+    { Name: "InteriorLightControl 1", State: "Primary" },
+    { Name: "InteriorLightControl 2", State: "Primary" }
+  ],
+  AllLamps: { InteriorFront: 0, InteriorMiddle: 1, InteriorRear: 0 }
+})), "off", "Scania ignoriert die dauerhaft aktive Mittellampe bei bestaetigtem Aus");
+equal(readPassengerLightState(vehicle({
+  InputIdentifier: "Scania",
+  Buttons: [
+    { Name: "InteriorLightControl 1", State: "Secondary" },
+    { Name: "InteriorLightControl 2", State: "Secondary" }
+  ]
+})), "dim", "Scania zeigt gemeinsam bestaetigtes Gedimmt an");
+equal(readPassengerLightState(scaniaMixedLight), "on", "Scania zeigt abweichende Front-/Heckstufen neutral als aktiv");
+equal(readPassengerLightState(vehicle({
+  InputIdentifier: "citea",
+  Buttons: [{ Name: "InteriorLightLevel", State: "Primary" }]
+})), "off", "Citea ordnet den live bestaetigten Primary-Zustand Aus zu");
+equal(readPassengerLightState(vehicle({
+  InputIdentifier: "citea",
+  Buttons: [{ Name: "InteriorLightLevel", State: "Tertiary" }]
+})), "on", "Citea ordnet den live bestaetigten Tertiary-Zustand neutral Ein zu");
+equal(readPassengerLightState(vehicle({
+  InputIdentifier: "citea",
+  Buttons: [{ Name: "InteriorLightLevel", State: "Secondary" }]
+})), "bright", "Citea ordnet den live bestaetigten Secondary-Zustand Hell zu");
+equal(readPassengerLightState(vehicle({
+  InputIdentifier: "citea",
+  Buttons: [{ Name: "InteriorLightLevel", State: "Tertiary" }],
+  AllLamps: { "Interior Lights Passenger": 3 }
+})), "bright", "Citea nutzt den physischen Lampenwert 3 fuer Hell auch bei abweichendem Buttonstate");
+equal(readPassengerLightState(vehicle({
+  InputIdentifier: "citea",
+  Buttons: [{ Name: "InteriorLightLevel", State: "Secondary" }],
+  AllLamps: { "Interior Lights Passenger": 0.1 }
+})), "on", "Citea nutzt den einzigen bestaetigten aktiven Lampenwert neutral als Ein");
+equal(readPassengerLightState(vehicle({
+  InputIdentifier: "MAN",
+  Buttons: [
+    { Name: "InteriorLightLowerDeck", State: "Dimmed" },
+    { Name: "InteriorLightUpperDeck", State: "Off" }
+  ]
+})), "on", "MAN zeigt abweichende Unter-/Oberdeckstufen neutral als aktiv");
+equal(readPassengerLightState(vehicle({
+  InputIdentifier: "MAN",
+  Buttons: [
+    { Name: "InteriorLightLowerDeck", State: "bRight" },
+    { Name: "InteriorLightUpperDeck", State: "bRight" }
+  ]
+})), "bright", "MAN zeigt die gemeinsam bestaetigte Hellstufe an");
+equal(readPassengerLightState(vehicle({
+  InputIdentifier: "MAN",
+  Buttons: [
+    { Name: "InteriorLightLowerDeck", State: "Dimmed" },
+    { Name: "InteriorLightUpperDeck", State: "Dimmed" }
+  ],
+  AllLamps: {
+    LightInteriorLowerDeck: 3,
+    LightInteriorUpperDeck: 3
+  }
+})), "bright", "MAN bevorzugt die physischen Lampenwerte 3 fuer Hell");
+equal(readPassengerLightState(vehicle({
+  InputIdentifier: "MAN",
+  Buttons: [
+    { Name: "InteriorLightLowerDeck", State: "bRight" },
+    { Name: "InteriorLightUpperDeck", State: "bRight" }
+  ],
+  AllLamps: {
+    LightInteriorLowerDeck: 0.1,
+    LightInteriorUpperDeck: 0.1
+  }
+})), "dim", "MAN bevorzugt die physischen Lampenwerte 0,1 fuer Gedimmt");
+equal(readPassengerLightState(vehicle({
+  InputIdentifier: "MAN",
+  AllLamps: {
+    LightInteriorLowerDeck: 0,
+    LightInteriorUpperDeck: 0
+  }
+})), "off", "MAN erkennt Aus ueber beide physischen Lampenwerte");
+
+const nonNumericEbuscoHvac = vehicle({
+  Buttons: [
+    {
+      Name: "Air Condition Temperature",
+      State: "Primary",
+      Actions: ["AirconditionPlus", "AirconditionMinus"],
+      States: ["Primary", "Secondary"]
+    },
+    { Name: "Aircon Pass Fanspeed Higher", Actions: ["PassFanspeedUp"] },
+    { Name: "Aircon Pass Fanspeed Lower", Actions: ["PassFanspeedDown"] }
+  ]
+});
+equal(resolveTemperatureCommand(nonNumericEbuscoHvac, 1)?.events[0], "AirconditionPlus", "Ebusco-Temperatur nutzt echten Plus-Event ohne erfundenen Wert");
+equal(resolveTemperatureCommand(nonNumericEbuscoHvac, -1)?.targetTemperatureC, undefined, "Ebusco-Temperatur erfindet keinen Sollwert");
+equal(resolveFanStepCommand(nonNumericEbuscoHvac, 1)?.events[0], "PassFanspeedUp", "Ebusco-Fahrgastraumluefter nutzt echten Aufwaerts-Event");
+equal(resolveFanStepCommand(nonNumericEbuscoHvac, -1)?.events[0], "PassFanspeedDown", "Ebusco-Fahrgastraumluefter nutzt echten Abwaerts-Event");
+equal(readHvacState(nonNumericEbuscoHvac).fanPercent, undefined, "Ebusco-Luefter erfindet keinen Prozentwert");
+equal(readHvacState(nonNumericEbuscoHvac).fanControlAvailable, true, "Ebusco-Luefter ist ueber gemeldete Richtungs-Events bedienbar");
+const nonNumericEbuscoState = readHvacState(nonNumericEbuscoHvac);
+check(renderedSvg(renderHvacKey("temperature-up", nonNumericEbuscoState)).includes("+1°"), "Ebusco-Temperaturtaste bleibt trotz unbekanntem Wert bedienbar");
+check(renderedSvg(renderHvacKey("temperature-up", nonNumericEbuscoState)).includes("--.- °C"), "Ebusco-Temperaturtaste zeigt keinen erfundenen Wert");
+check(renderedSvg(renderHvacDial("fan-speed", nonNumericEbuscoState)).includes("--"), "Ebusco-Luefterdial zeigt unbekannten Wert neutral");
+
+const scaniaClimateOff = vehicle({
+  InputIdentifier: "Scania",
+  Buttons: [{
+    Name: "Air Condition",
+    State: "Off",
+    States: ["Off", "1", "2", "3"],
+    Actions: ["ACIntensity", "Air ConditionFakeLeft", "Air ConditionFakeRight"]
+  }]
+});
+equal(readHvacState(scaniaClimateOff).climateEnabled, false, "Scania-Klimastufe AUS wird als aus erkannt");
+equal(JSON.stringify(resolveHvacSwitchCommand(scaniaClimateOff, "climate")?.events), '["Air ConditionFakeRight"]', "Scania schaltet von AUS mit dem echten Rechts-Event auf Stufe 1");
+const scaniaClimateStageTwo = vehicle({
+  InputIdentifier: "Scania",
+  Buttons: [{
+    Name: "Air Condition",
+    State: "2",
+    States: ["Off", "1", "2", "3"],
+    Actions: ["ACIntensity", "Air ConditionFakeLeft", "Air ConditionFakeRight"]
+  }]
+});
+equal(readHvacState(scaniaClimateStageTwo).climateEnabled, true, "Scania-Klimastufe 2 wird als ein erkannt");
+equal(JSON.stringify(resolveHvacSwitchCommand(scaniaClimateStageTwo, "climate")?.events), '["Air ConditionFakeLeft","Air ConditionFakeLeft"]', "Scania schaltet rueckmeldungsgefuehrt von Stufe 2 auf AUS");
+
+equal(JSON.stringify(resolveTemperatureCommand(capturedMan, 1)?.events), '["AirconditionKeyDown","AirconditionKeyDown"]', "MAN waermer korrigiert die live bestaetigte vertauschte Eventrichtung");
+equal(JSON.stringify(resolveTemperatureCommand(capturedMan, -1)?.events), '["AirconditionKeyUp","AirconditionKeyUp"]', "MAN kaelter korrigiert die live bestaetigte vertauschte Eventrichtung");
+equal(JSON.stringify(resolveTemperatureCommand(capturedScania, 1)?.events), '["AirconditionKeyUp","AirconditionKeyUp"]', "Scania behaelt die normale Temperatur-Eventrichtung");
+
+const lowerCaseVehicleControls = vehicle({
+  Buttons: [
+    { Name: "Wiper", State: "interval", Actions: ["WiperDown", "WiperUp"] },
+    { Name: "Light Switch", State: "parking", Actions: ["LightSwitchDown", "LightSwitchUp"] }
+  ]
+});
+equal(readWiperState(lowerCaseVehicleControls), "Interval", "Kleingeschriebenes Wischerintervall wird normalisiert");
+equal(readExteriorLightState(lowerCaseVehicleControls).switchState, "Parking Lights", "Ebusco-Parking-State wird normalisiert");
 
 // UI-05/UI-06: OFFLINE bleibt ausschließlich der Verbindungsverlust. Eine
 // erreichbare Telemetrie ohne Bus zeigt zentral den neutralen --- Platzhalter.
@@ -375,6 +821,22 @@ equal(gear.resolve(vehicle({
 equal(gear.resolve(undefined, 1200), "R", "Kurze Telemetrieluecke behaelt R");
 equal(gear.resolve(undefined, 1700), undefined, "Laengere Trennung wird offline");
 
+// Der Urbino liefert in Neutral dauerhaft den widerspruechlichen direkten
+// Getriebewert R. Sein Gear-Selector-Button wurde live als korrekte Quelle
+// bestaetigt und darf deshalb nur bei dieser Familie Vorrang erhalten.
+const urbinoGear = new GearStateResolver();
+equal(urbinoGear.resolve(vehicle({
+  InputIdentifier: "urbino",
+  Gearbox: { CurrentSelector: "D" },
+  Buttons: [{ Name: "Gear Selector", State: "Drive" }]
+}), 0), "D", "Urbino startet mit uebereinstimmendem D");
+urbinoGear.expect("N", 100);
+equal(urbinoGear.resolve(vehicle({
+  InputIdentifier: "urbino",
+  Gearbox: { CurrentSelector: "R" },
+  Buttons: [{ Name: "Gear Selector", State: "Neutral" }]
+}), 150), "N", "Urbino bevorzugt bei der live bestaetigten Neutral-Abweichung den korrekten Buttonzustand");
+
 // Türfreigabe: echter Button vor Lampe, Lampenfallback nur bei fehlendem Button.
 equal(readDoorClearanceState(vehicle({
   Buttons: [{ Name: "Door Clearance", State: true }],
@@ -395,6 +857,20 @@ equal(JSON.stringify(doorAllCommandIndexes(["closed", "closed", "closed"])), "[0
 equal(summarizeDoorStates(["closed", "open", "moving"]), "moving", "Gemischter Tuerzustand");
 equal(JSON.stringify(doorAllCommandIndexes(["closed", "open", "moving"])), "[1,2]", "Mixed schliesst nur offene/bewegte Tueren");
 equal(JSON.stringify(doorAllCommandIndexes(["open", "open", "open"])), "[0,1,2]", "All Open schliesst alle Tueren");
+equal(JSON.stringify(readAvailableDoorStates(vehicle({
+  InputIdentifier: "MAN",
+  doors: [
+    { Name: "Door Front", Index: "First", Open: "false", Progress: "0.0" },
+    { Name: "Door Rear", Index: "Third", Open: "true", Progress: "1.0" },
+    { Name: "Door Middle", Index: "Second ", Open: "false", Progress: "0.0" }
+  ]
+}))), '["closed","closed","open"]', "MAN-Tuerzustand wird nach dem echten physischen Index sortiert");
+equal(JSON.stringify(readAvailableDoorStates(vehicle({
+  doors: [
+    { Name: "Legacy 1", Open: "true", Progress: "1.0" },
+    { Name: "Legacy 2", Open: "false", Progress: "0.0" }
+  ]
+}))), '["open","closed"]', "Fahrzeuge ohne Index-Metadaten behalten ihre bisherige Reihenfolge");
 
 // Geschwindigkeit: READY nur bei bestaetigtem Stillstand.
 equal(readVehicleSpeedKmh(vehicle({ Speed: 0 })), 0, "Speed 0 numerisch");
@@ -415,6 +891,34 @@ equal(readKneelingState(vehicle({
   Wheels: wheels([0.2, 0.4, 0.3])
 })), true, "Secondary muss als abgesenkt gelten");
 equal(readKneelingState(vehicle({ Wheels: wheels([4.8, 5.0, 4.7]) })), true, "Radfallback fuer Fahrzeuge ohne Kneeling-Button");
+const scaniaRaisedKneeling = vehicle({
+  InputIdentifier: "Scania",
+  Buttons: [{ Name: "Kneeling", State: "Secondary" }],
+  Wheels: wheels([0.2, 0.4, 0.3])
+});
+equal(readKneelingButtonState(scaniaRaisedKneeling), undefined, "Scania ignoriert den live als unzuverlaessig bestaetigten Kneeling-Button");
+equal(readKneelingState(scaniaRaisedKneeling), false, "Scania erkennt den angehobenen Zustand mechanisch");
+equal(readKneelingState(vehicle({
+  InputIdentifier: "Scania",
+  Buttons: [{ Name: "Kneeling", State: "Primary" }],
+  Wheels: wheels([10.0, 10.3, 9.4])
+})), true, "Scania erkennt den abgesenkten Zustand mechanisch trotz unveraendertem Button");
+const manRaisedKneeling = vehicle({
+  InputIdentifier: "MAN",
+  Buttons: [{ Name: "Kneeling", State: "Secondary" }],
+  Wheels: wheels([1.0, 1.1, 0.9])
+});
+equal(readKneelingButtonState(manRaisedKneeling), false, "MAN Secondary bestaetigt live den angehobenen Zustand");
+equal(readKneelingState(manRaisedKneeling), false, "MAN zeigt den angehobenen Zustand korrekt an");
+const manLoweredKneeling = vehicle({
+  InputIdentifier: "MAN",
+  Buttons: [{ Name: "Kneeling", State: "Primary" }],
+  Wheels: wheels([3.7, 3.8, 3.6])
+});
+equal(readKneelingButtonState(manLoweredKneeling), true, "MAN Primary bestaetigt live den abgesenkten Zustand");
+equal(readKneelingState(manLoweredKneeling), true, "MAN zeigt den abgesenkten Zustand korrekt an");
+equal(resolveManualKneelingEvent(manRaisedKneeling, true), "KneelDown", "MAN senkt mit dem live bestaetigten Event ab");
+equal(resolveManualKneelingEvent(manLoweredKneeling, false), "KneelUp", "MAN hebt mit dem live bestaetigten Event an");
 
 // Bewegungsverfolgung wartet auf echte Bewegung oder spaeten Buttonfallback.
 const motion = new KneelingMotionTracker();

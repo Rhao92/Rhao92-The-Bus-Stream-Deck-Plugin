@@ -2,6 +2,7 @@ import { action } from "@elgato/streamdeck";
 import { BaseToggleAction } from "../base/base-toggle-action";
 import { TelemetrySnapshot } from "../core/telemetry";
 import { readAutomaticKneelingState } from "../core/vehicle-controls";
+import { resolveAutomaticKneelingEvent } from "../core/vehicle-events";
 
 @action({ UUID: "de.rhao92.thebus-telemetry-interface.automatic-kneeling" })
 export class AutomaticKneelingAction extends BaseToggleAction {
@@ -20,9 +21,9 @@ export class AutomaticKneelingAction extends BaseToggleAction {
   }
 
   protected override getToggleEventName(
-    _snapshot: TelemetrySnapshot,
+    snapshot: TelemetrySnapshot,
     _active: boolean
-  ): string {
-    return "Pedestrians";
+  ): string | undefined {
+    return resolveAutomaticKneelingEvent(snapshot.vehicle);
   }
 }

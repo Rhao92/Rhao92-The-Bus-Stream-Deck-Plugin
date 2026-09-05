@@ -79,11 +79,13 @@
     <label><input type="radio" name="kind" value="delta"><strong data-i18n="Abweichung">Abweichung</strong></label>
     <label><input type="radio" name="kind" value="ingame"><strong data-i18n="Ingame-Zeit">Ingame-Zeit</strong></label>
     <label><input type="radio" name="kind" value="status"><strong data-i18n="Status">Status</strong></label>
+    <label id="stop-request-option" hidden><input type="radio" name="kind" value="stop-request"><strong data-i18n="Haltewunsch">Haltewunsch</strong></label>
   </fieldset>
 
   <script src="i18n.js"></script>
   <script>
-    const validKinds = new Set(["stop", "arrival", "departure", "delta", "ingame", "status"]);
+    const panelKinds = ["stop", "arrival", "departure", "delta", "ingame", "status"];
+    let validKinds = new Set(panelKinds);
     let websocket;
     let context;
     let settings = { kind: "stop" };
@@ -119,6 +121,11 @@
       context = propertyInspectorUUID;
       try {
         const parsed = JSON.parse(actionInfo);
+        const actionUuid = parsed?.action ?? "";
+        if (actionUuid === "de.rhao92.thebus-telemetry-interface.timetable-button") {
+          validKinds = new Set([...panelKinds, "stop-request"]);
+          document.getElementById("stop-request-option").hidden = false;
+        }
         settings = { ...(parsed?.payload?.settings ?? {}), kind: selectedKind(parsed?.payload?.settings?.kind) };
       } catch {
         settings = { kind: "stop" };

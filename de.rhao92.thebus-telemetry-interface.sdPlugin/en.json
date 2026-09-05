@@ -25,7 +25,7 @@
     },
     "de.rhao92.thebus-telemetry-interface.timetable-button": {
       "Name": "Timetable · Key",
-      "Tooltip": "One timetable key for stop, arrival, departure, deviation, in-game time, or status."
+      "Tooltip": "One timetable key for stop, arrival, departure, deviation, in-game time, status, or stop request."
     },
     "de.rhao92.thebus-telemetry-interface.stop-request": {
       "Name": "Timetable · Stop request",
@@ -68,8 +68,8 @@
       "Tooltip": "Beta diagnostics: saves the last 60 seconds as TXT in the Documents subfolder Projects\\The Bus\\NaviDebug."
     },
     "de.rhao92.thebus-telemetry-interface.vehicle-speed": {
-      "Name": "Vehicle · Speed",
-      "Tooltip": "Shows current speed: white up to the limit, yellow at +1 to +4, and red from +5 km/h."
+      "Name": "Vehicle · Display",
+      "Tooltip": "Configurable key for speed, speed limit, power or trip consumption, and battery level."
     },
     "de.rhao92.thebus-telemetry-interface.vehicle-speed-limit": {
       "Name": "Vehicle · Speed limit",
@@ -99,8 +99,8 @@
       }
     },
     "de.rhao92.thebus-telemetry-interface.door-control": {
-      "Name": "Doors · Door control",
-      "Tooltip": "Configurable key for all doors or doors 1 to 4. Display and animation follow confirmed door telemetry."
+      "Name": "Doors · Control",
+      "Tooltip": "Configurable key for all doors, doors 1 to 4, door clearance, or automatic door closing. The display follows confirmed telemetry."
     },
     "de.rhao92.thebus-telemetry-interface.door-clearance": {
       "Name": "Doors · Door clearance",
@@ -111,8 +111,8 @@
       "Tooltip": "Toggles automatic closing of the rear doors and displays only the confirmed vehicle state."
     },
     "de.rhao92.thebus-telemetry-interface.gear-selector": {
-      "Name": "Driving · Gear selection",
-      "Tooltip": "Configurable key for D, N, or R. The active gear is displayed from telemetry only."
+      "Name": "Driving · Controls",
+      "Tooltip": "One configurable key for gear selection, indicators, hazard lights, parking or stop brake, retarder, and windshield wipers. Display and control remain fully telemetry-driven."
     },
     "de.rhao92.thebus-telemetry-interface.indicator-control": {
       "Name": "Driving · Indicators",
@@ -123,8 +123,8 @@
       "Tooltip": "Hold as in the bus. Offline, off, ignition, and engine follow EngineStarted/IgnitionEnabled only; contradictory long-press intermediate values are filtered."
     },
     "de.rhao92.thebus-telemetry-interface.parking-brake": {
-      "Name": "Driving · Parking brake",
-      "Tooltip": "Toggles the parking brake. The display follows Parking Brake.State or FixingBrake only."
+      "Name": "Driving · Brakes",
+      "Tooltip": "Configurable key for the parking brake or stop brake. Display and control follow confirmed vehicle telemetry only."
     },
     "de.rhao92.thebus-telemetry-interface.retarder-control": {
       "Name": "Driving · Retarder",
@@ -152,7 +152,7 @@
     },
     "de.rhao92.thebus-telemetry-interface.passenger-light-control": {
       "Name": "Lights · Passenger compartment",
-      "Tooltip": "Configurable key to toggle, dim, or brighten the passenger-compartment lighting."
+      "Tooltip": "Directly selects Off or On and, where confirmed for the vehicle, Dimmed or Bright using confirmed events and states only."
     },
     "de.rhao92.thebus-telemetry-interface.ticket-control": {
       "Name": "Ticketing · ATRON control",
@@ -212,14 +212,14 @@
     },
     "de.rhao92.thebus-telemetry-interface.passenger-lights": {
       "Name": "Lights · Passenger compartment",
-      "Tooltip": "Toggles passenger-compartment lighting and displays only confirmed Off, Dimmed, or Bright states."
+      "Tooltip": "Toggles passenger lighting or advances to the next real light level, depending on the vehicle. The display shows only confirmed states."
     },
     "de.rhao92.thebus-telemetry-interface.passenger-lights-dim": {
       "Name": "Lights · Passenger compartment dimmer",
-      "Tooltip": "Turns passenger-compartment lighting on if necessary and dims it; the display remains fully telemetry-driven."
+      "Tooltip": "Selects the dimmer passenger-light setting only when the vehicle provides a separate confirmed control; the display remains telemetry-driven."
     },
     "de.rhao92.thebus-telemetry-interface.passenger-lights-bright": {
       "Name": "Lights · Passenger compartment brighter",
-      "Tooltip": "Turns passenger-compartment lighting on if necessary and increases brightness; the display remains fully telemetry-driven."
+      "Tooltip": "Selects the brighter passenger-light setting only when the vehicle provides a separate confirmed control; the display remains telemetry-driven."
     }
 }

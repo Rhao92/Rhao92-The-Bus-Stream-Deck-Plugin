@@ -6,17 +6,10 @@ import {
   doorAllCommandIndexes,
   DoorState,
   readAvailableDoorStates,
-  readDoorState,
   summarizeDoorStates
 } from "../core/doors";
 import { TelemetrySnapshot } from "../core/telemetry";
-
-const DOOR_EVENTS = [
-  "DoorFrontOpenClose",
-  "DoorMiddleOpenClose",
-  "DoorRearOpenClose",
-  "DoorFourthOpenClose"
-] as const;
+import { resolveDoorToggleEvent } from "../core/vehicle-events";
 
 const SINGLE_DOOR_STATES = {
   offline: 0,
@@ -34,6 +27,25 @@ const ALL_DOORS_STATES = {
   movingDim: 4,
   moving: 5
 } as const;
+
+function readFullyControllableDoorStates(
+  snapshot: TelemetrySnapshot
+): DoorState[] | undefined {
+  if (!snapshot.connected || !snapshot.vehicle) {
+    return undefined;
+  }
+
+  const states = readAvailableDoorStates(snapshot.vehicle);
+
+  if (
+    !states
+    || states.some((_, index) => !resolveDoorToggleEvent(snapshot.vehicle, index))
+  ) {
+    return undefined;
+  }
+
+  return states;
+}
 
 abstract class SingleDoorAction extends BaseAnimationAction {
   protected abstract readonly doorIndex: number;
@@ -73,7 +85,10 @@ abstract class SingleDoorAction extends BaseAnimationAction {
 
     const snapshot = this.snapshot;
     const state = this.readState(snapshot);
-    const eventName = DOOR_EVENTS[this.doorIndex];
+    const eventName = resolveDoorToggleEvent(
+      snapshot.vehicle,
+      this.doorIndex
+    );
 
     // Ein fehlender Tuerzustand ist kein bestaetigtes "geschlossen". Ohne
     // sichere Telemetrie wird deshalb auch kein Toggle-Befehl gesendet.
@@ -104,7 +119,11 @@ abstract class SingleDoorAction extends BaseAnimationAction {
       return undefined;
     }
 
-    return readDoorState(snapshot.vehicle.doors?.[this.doorIndex]);
+    if (!resolveDoorToggleEvent(snapshot.vehicle, this.doorIndex)) {
+      return undefined;
+    }
+
+    return readAvailableDoorStates(snapshot.vehicle)?.[this.doorIndex];
   }
 }
 
@@ -179,9 +198,7 @@ export class AllDoorsAction extends BaseAnimationAction {
     }
 
     const snapshot = this.snapshot;
-    const states = snapshot.connected
-      ? readAvailableDoorStates(snapshot.vehicle)
-      : undefined;
+    const states = readFullyControllableDoorStates(snapshot);
 
     if (!states || !snapshot.vehicleId) {
       return;
@@ -199,7 +216,7 @@ export class AllDoorsAction extends BaseAnimationAction {
     try {
       for (let position = 0; position < indexes.length; position += 1) {
         const index = indexes[position];
-        const eventName = DOOR_EVENTS[index];
+        const eventName = resolveDoorToggleEvent(snapshot.vehicle, index);
 
         if (!eventName) {
           continue;
@@ -230,10 +247,6 @@ export class AllDoorsAction extends BaseAnimationAction {
   }
 
   private readGroupState(snapshot: TelemetrySnapshot) {
-    if (!snapshot.connected || !snapshot.vehicle) {
-      return undefined;
-    }
-
-    return summarizeDoorStates(readAvailableDoorStates(snapshot.vehicle));
+    return summarizeDoorStates(readFullyControllableDoorStates(snapshot));
   }
 }

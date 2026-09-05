@@ -75,7 +75,7 @@ export class NavigationDebugExportError extends Error {
 }
 
 const FORMAT_VERSION = 3;
-const PLUGIN_VERSION = "2.16.0.21";
+const PLUGIN_VERSION = "2.17.0.0";
 const BUFFER_MS = 60_000;
 const BUFFER_RETENTION_MS = BUFFER_MS + 5_000;
 export const NAVIGATION_DEBUG_OUTPUT_DIRECTORY =

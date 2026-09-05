@@ -183,9 +183,9 @@ function exactState<TState extends string>(
   states: ReadonlySet<TState>
 ): TState | undefined {
   const value = typeof button?.State === "string"
-    ? button.State.trim()
+    ? button.State.trim().toLowerCase()
     : "";
-  return states.has(value as TState) ? value as TState : undefined;
+  return [...states].find((state) => state.toLowerCase() === value);
 }
 
 function readLampCaseInsensitive(
@@ -341,8 +341,15 @@ export function readExteriorLightState(
       ? false
       : normalizeControlBoolean(highBeamButton?.State);
 
+  const exactSwitchState = exactState(lightSwitch, LIGHT_SWITCH_STATES);
+  const switchState = exactSwitchState ?? (
+    String(lightSwitch?.State ?? "").trim().toLowerCase() === "parking"
+      ? "Parking Lights"
+      : undefined
+  );
+
   return {
-    switchState: exactState(lightSwitch, LIGHT_SWITCH_STATES),
+    switchState,
     daytime: readLampCaseInsensitive(vehicle, "Light Daytime"),
     parking: readLampCaseInsensitive(vehicle, "Light Parking"),
     headlights: readLampCaseInsensitive(vehicle, "Light Headlight"),

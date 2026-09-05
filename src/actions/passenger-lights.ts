@@ -9,19 +9,34 @@ import {
   PassengerLightState,
   readPassengerLightState
 } from "../core/vehicle-controls";
+import {
+  passengerLightTargetRequiresPressRelease,
+  resolvePassengerLightLevelEvent,
+  resolvePassengerLightTargetEventBatches,
+  resolvePassengerLightToggleEvent
+} from "../core/vehicle-events";
+import { vehicleIdentityContains } from "../core/vehicle-identity";
 
 const LIGHT_STATES = {
   offline: 0,
   off: 1,
+  on: 2,
   dim: 2,
   bright: 3
 } as const;
 const LIGHT_LEVEL_DELAY_MS = 150;
+const PASSENGER_LIGHT_AREA_DELAY_MS = 180;
+const PASSENGER_LIGHT_STEP_DELAY_MS = 450;
+const PASSENGER_LIGHT_PRESS_DURATION_MS = 120;
 
 function displayStateFor(state: PassengerLightState | undefined): number {
   switch (state) {
     case "off":
       return LIGHT_STATES.off;
+    case "on":
+      // Gelb bedeutet hier nur bestaetigt eingeschaltet. Ohne passende
+      // Rueckmeldung wird daraus keine konkrete Helligkeitsstufe abgeleitet.
+      return LIGHT_STATES.on;
     case "dim":
       return LIGHT_STATES.dim;
     case "bright":
@@ -54,15 +69,15 @@ export class PassengerLightsAction extends BaseToggleAction {
   }
 
   protected override getToggleEventName(
-    _snapshot: TelemetrySnapshot,
+    snapshot: TelemetrySnapshot,
     _active: boolean
-  ): string {
-    return "TogglePassengersLight";
+  ): string | undefined {
+    return resolvePassengerLightToggleEvent(snapshot.vehicle);
   }
 }
 
 abstract class PassengerLightLevelAction extends BaseDisplayAction {
-  protected abstract readonly targetState: Exclude<PassengerLightState, "off">;
+  protected abstract readonly targetState: "dim" | "bright";
   protected abstract readonly targetEventName: string;
 
   private commandInFlight = false;
@@ -91,7 +106,7 @@ abstract class PassengerLightLevelAction extends BaseDisplayAction {
       ? readPassengerLightState(snapshot.vehicle)
       : undefined;
 
-    if (!vehicleId || currentState === undefined || currentState === this.targetState) {
+    if (!vehicleId || currentState === this.targetState) {
       return;
     }
 
@@ -99,8 +114,93 @@ abstract class PassengerLightLevelAction extends BaseDisplayAction {
     this.commandInFlight = true;
 
     try {
+      const targetEventBatches = resolvePassengerLightTargetEventBatches(
+        snapshot.vehicle,
+        this.targetState
+      );
+
+      if (targetEventBatches !== undefined) {
+        for (let index = 0; index < targetEventBatches.length; index += 1) {
+          if (this.snapshot.vehicleId !== vehicleId) {
+            return;
+          }
+
+          const eventBatch = targetEventBatches[index];
+
+          for (let eventIndex = 0; eventIndex < eventBatch.length; eventIndex += 1) {
+            if (this.snapshot.vehicleId !== vehicleId) {
+              return;
+            }
+
+            const eventName = eventBatch[eventIndex];
+            const sent = await this.sendEvent(eventName);
+
+            if (!sent) {
+              this.logWarning(`Event \"${eventName}\" konnte nicht gesendet werden.`);
+              return;
+            }
+
+            if (eventIndex < eventBatch.length - 1) {
+              await new Promise((resolve) => setTimeout(
+                resolve,
+                PASSENGER_LIGHT_AREA_DELAY_MS
+              ));
+            }
+          }
+
+          this.refreshTelemetrySoon();
+
+          if (index < targetEventBatches.length - 1) {
+            await new Promise((resolve) => setTimeout(
+              resolve,
+              PASSENGER_LIGHT_STEP_DELAY_MS
+            ));
+          }
+        }
+
+        if (targetEventBatches.length > 0) {
+          this.refreshTelemetrySoon();
+        }
+        return;
+      }
+
+      const directEvent = resolvePassengerLightLevelEvent(
+        snapshot.vehicle,
+        this.targetState
+      );
+
+      if (!directEvent && vehicleIdentityContains(snapshot.vehicle, "citea")) {
+        return;
+      }
+
+      if (
+        directEvent
+        && passengerLightTargetRequiresPressRelease(snapshot.vehicle)
+      ) {
+        const pressed = await this.pressEvent(directEvent);
+        await new Promise((resolve) => setTimeout(
+          resolve,
+          PASSENGER_LIGHT_PRESS_DURATION_MS
+        ));
+        const released = await this.releaseEvent(directEvent);
+
+        if (!pressed || !released) {
+          this.logWarning(`Event \"${directEvent}\" konnte nicht vollständig gesendet werden.`);
+          return;
+        }
+
+        this.refreshTelemetrySoon();
+        return;
+      }
+
       if (currentState === "off") {
-        const enabled = await this.sendEvent("TogglePassengersLight");
+        const toggleEvent = resolvePassengerLightToggleEvent(snapshot.vehicle);
+
+        if (!toggleEvent) {
+          return;
+        }
+
+        const enabled = await this.sendEvent(toggleEvent);
 
         if (!enabled) {
           this.logWarning("Fahrgastraumlicht konnte nicht eingeschaltet werden.");
@@ -120,10 +220,19 @@ abstract class PassengerLightLevelAction extends BaseDisplayAction {
         }
       }
 
-      const sent = await this.sendEvent(this.targetEventName);
+      const eventName = resolvePassengerLightLevelEvent(
+        snapshot.vehicle,
+        this.targetState
+      );
+
+      if (!eventName) {
+        return;
+      }
+
+      const sent = await this.sendEvent(eventName);
 
       if (!sent) {
-        this.logWarning(`Event \"${this.targetEventName}\" konnte nicht gesendet werden.`);
+        this.logWarning(`Event \"${eventName}\" konnte nicht gesendet werden.`);
         return;
       }
 

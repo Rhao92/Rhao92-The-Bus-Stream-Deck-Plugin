@@ -1,5 +1,6 @@
 import { normalizeControlBoolean } from "./driving-controls";
 import type { VehicleButton, VehicleTelemetry } from "./telemetry";
+import { vehicleIdentityContains } from "./vehicle-identity";
 
 export type HvacMode =
   | "climate"
@@ -412,10 +413,58 @@ function eventOf(button: VehicleButton | undefined, names: readonly string[]): s
 }
 
 function climateToggleEvent(button: VehicleButton | undefined): string | undefined {
+  const stage = indexedStage(button);
+
+  if (stage && stage.count > 2) {
+    return actionsOf(button).find((eventName) => {
+      const action = fold(eventName);
+      return stage.current === 1
+        ? action.includes("airconditionfakeright")
+        : action.includes("airconditionfakeleft");
+    });
+  }
+
   return actionsOf(button).find((eventName) => {
     const action = fold(eventName);
     return action.includes("toggle") && isClimateToken(action);
   }) ?? actionsOf(button).find((eventName) => isClimateToken(fold(eventName)));
+}
+
+function climateEnabledState(
+  button: VehicleButton | undefined
+): boolean | undefined {
+  const stage = indexedStage(button);
+
+  if (stage && stage.count > 2) {
+    return stage.current > 1;
+  }
+
+  return twoStateEnabled(button);
+}
+
+function climateSwitchCommand(
+  button: VehicleButton | undefined
+): HvacCommand | undefined {
+  const stage = indexedStage(button);
+
+  if (stage && stage.count > 2) {
+    const eventName = climateToggleEvent(button);
+
+    if (!eventName) {
+      return undefined;
+    }
+
+    // Beim vierstufigen Scania-Regler schaltet Rechts von AUS auf Stufe 1.
+    // Zum Ausschalten wird über den echten Links-Event stufenweise bis AUS
+    // zurückgegangen. Der sichtbare Zustand folgt weiterhin der Telemetrie.
+    const repeats = stage.current === 1 ? 1 : stage.current - 1;
+    return {
+      events: Array.from({ length: repeats }, () => eventName)
+    };
+  }
+
+  const eventName = climateToggleEvent(button);
+  return eventName ? { events: [eventName] } : undefined;
 }
 
 function parseSetTemperatureEvent(eventName: string): number | undefined {
@@ -536,6 +585,26 @@ function listedFanDirectionEvent(
   });
 }
 
+function listedPassengerFanDirectionEvent(
+  vehicle: VehicleTelemetry | undefined,
+  direction: 1 | -1
+): string | undefined {
+  return allActions(vehicle).find((eventName) => {
+    const action = fold(eventName);
+    const passengerFan = action.includes("passfanspeed")
+      || action.includes("passengerfanspeed")
+      || action.includes("cabinfanspeed");
+
+    if (!passengerFan) {
+      return false;
+    }
+
+    return direction > 0
+      ? action.includes("up") || action.includes("plus") || action.includes("increase")
+      : action.includes("down") || action.includes("minus") || action.includes("decrease");
+  });
+}
+
 export function normalizeHvacMode(value: unknown): HvacMode {
   switch (value) {
     case "ac-mode":
@@ -581,17 +650,23 @@ export function readHvacState(vehicle: VehicleTelemetry | undefined): HvacState 
   const fanPercent = parseFanPercent(fanButton?.Value)
     ?? parseFanPercent(fanButton?.State);
   const fanDirectionAvailable = Boolean(
-    fanButton
-    && fanPercent !== undefined
-    && (
+    (
+      fanButton
+      && fanPercent !== undefined
+      && (
       (listedFanDirectionEvent(fanButton, 1) && listedFanDirectionEvent(fanButton, -1))
       || allActions(vehicle).some((eventName) => parseSetFanEvent(eventName) !== undefined)
+      )
+    )
+    || (
+      listedPassengerFanDirectionEvent(vehicle, 1)
+      && listedPassengerFanDirectionEvent(vehicle, -1)
     )
   );
 
   return {
     climateAvailable: Boolean(climateButton),
-    climateEnabled: twoStateEnabled(climateButton),
+    climateEnabled: climateEnabledState(climateButton),
     climateToggleEvent: climateToggleEvent(climateButton),
     acModeAvailable: Boolean(eventOf(acModeButton, ["ACMode"])),
     coolingEnabled: coolingEnabled(acModeButton),
@@ -607,7 +682,9 @@ export function readHvacState(vehicle: VehicleTelemetry | undefined): HvacState 
       temperatureButton
       && (directionEvent(temperatureButton, 1) || directionEvent(temperatureButton, -1))
     ),
-    fanAvailable: fanPercent !== undefined || currentVentilationStage !== undefined,
+    fanAvailable: fanPercent !== undefined
+      || currentVentilationStage !== undefined
+      || fanDirectionAvailable,
     fanPercent,
     fanStagePercent: fanStage(fanPercent),
     fanControlAvailable: fanDirectionAvailable,
@@ -645,15 +722,17 @@ export function resolveHvacSwitchCommand(
         : kind === "circulation"
           ? findCirculationButton(vehicle)
           : findFrontCirculationButton(vehicle);
-  const eventName = kind === "climate"
-    ? climateToggleEvent(button)
-    : eventOf(button, kind === "ac-mode"
-      ? ["ACMode"]
-      : kind === "rear"
-        ? ["ACRear"]
-        : kind === "circulation"
-          ? ["ACCirculation"]
-          : ["ACCirculationFront"]);
+  if (kind === "climate") {
+    return climateSwitchCommand(button);
+  }
+
+  const eventName = eventOf(button, kind === "ac-mode"
+    ? ["ACMode"]
+    : kind === "rear"
+      ? ["ACRear"]
+      : kind === "circulation"
+        ? ["ACCirculation"]
+        : ["ACCirculationFront"]);
 
   return eventName ? { events: [eventName] } : undefined;
 }
@@ -664,12 +743,26 @@ export function resolveTemperatureCommand(
 ): HvacCommand | undefined {
   const button = findTemperatureButton(vehicle);
   const current = parseTemperature(button?.State);
-  if (!button || current === undefined) {
+  if (!button) {
     return undefined;
   }
 
+  // Beim MAN sind die beiden von TML benannten KeyUp/KeyDown-Events im
+  // Praxistest genau entgegengesetzt zur Temperaturwirkung. Nur für diese
+  // technische Fahrzeugidentität wird die Richtung gedreht.
+  const eventDirection = vehicleIdentityContains(vehicle, "man")
+    ? direction === 1 ? -1 : 1
+    : direction;
+  const nativeDirection = directionEvent(button, eventDirection);
+
+  // Einige Busse melden echte Plus-/Minus-Events, aber keinen numerischen
+  // Sollwert. Der einzelne physische Regelschritt darf dann verwendet werden;
+  // Anzeige und Zieltemperatur bleiben bewusst unbekannt.
+  if (current === undefined) {
+    return nativeDirection ? { events: [nativeDirection] } : undefined;
+  }
+
   const target = Math.round((current + direction) * 10) / 10;
-  const nativeDirection = directionEvent(button, direction);
 
   // Der physische Regler und die Rohschnittstelle bestaetigen 0,5-Grad-
   // Schritte. Fuer die gewuenschte 1-Grad-Taste wird daher der echte
@@ -703,7 +796,8 @@ export function resolveFanStepCommand(
   const percent = parseFanPercent(fanButton?.Value)
     ?? parseFanPercent(fanButton?.State);
   if (!fanButton || percent === undefined) {
-    return undefined;
+    const eventName = listedPassengerFanDirectionEvent(vehicle, direction);
+    return eventName ? { events: [eventName] } : undefined;
   }
 
   const currentStage = fanStage(percent) ?? 0;

@@ -3,7 +3,11 @@ import {
   KeyDownEvent
 } from "@elgato/streamdeck";
 import { BaseDisplayAction, DisplayModel } from "../base/base-display-action";
-import { GEAR_EVENTS, GearPosition, GearStateResolver } from "../core/gear";
+import {
+  GearPosition,
+  GearStateResolver,
+  resolveGearCommand
+} from "../core/gear";
 import { TelemetrySnapshot } from "../core/telemetry";
 
 abstract class GearSelectorAction extends BaseDisplayAction {
@@ -45,15 +49,34 @@ abstract class GearSelectorAction extends BaseDisplayAction {
       return;
     }
 
-    const eventName = GEAR_EVENTS[this.targetGear];
+    const events = resolveGearCommand(
+      snapshot.vehicle,
+      currentGear,
+      this.targetGear
+    );
+
+    if (!events || events.length === 0) {
+      return;
+    }
+
     this.commandInFlight = true;
 
     try {
-      const sent = await this.sendEvent(eventName);
+      for (let index = 0; index < events.length; index += 1) {
+        if (this.snapshot.vehicleId !== snapshot.vehicleId) {
+          return;
+        }
 
-      if (!sent) {
-        this.logWarning(`Event \"${eventName}\" konnte nicht gesendet werden.`);
-        return;
+        const sent = await this.sendEvent(events[index]);
+
+        if (!sent) {
+          this.logWarning(`Event \"${events[index]}\" konnte nicht gesendet werden.`);
+          return;
+        }
+
+        if (index < events.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
       }
 
       // Nur das erwartete Ziel merken. Sichtbar wird es weiterhin erst, wenn
@@ -61,7 +84,10 @@ abstract class GearSelectorAction extends BaseDisplayAction {
       this.gearResolver.expect(this.targetGear);
       this.refreshTelemetrySoon();
     } catch (error) {
-      this.logError(`Fehler beim Senden von \"${eventName}\".`, error);
+      this.logError(
+        `Fehler beim Senden der Gangfolge \"${events.join(", ")}\".`,
+        error
+      );
     } finally {
       this.commandInFlight = false;
     }
@@ -95,4 +121,3 @@ export class GearNeutralAction extends GearSelectorAction {
 export class GearReverseAction extends GearSelectorAction {
   protected readonly targetGear = "R";
 }
-

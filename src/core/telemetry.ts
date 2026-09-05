@@ -23,6 +23,7 @@ export type VehicleButton = {
 
 export type DoorTelemetry = {
   Name?: string;
+  Index?: unknown;
   Open?: unknown;
   Progress?: unknown;
   StopRequest?: unknown;

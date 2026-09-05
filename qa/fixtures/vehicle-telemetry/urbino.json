@@ -1,0 +1,1911 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "api": "The Bus official local telemetry API",
+    "baseUrl": "http://127.0.0.1:37337",
+    "readOnly": true
+  },
+  "identity": {
+    "actorClass": "BP_Solaris_Urbino_18m_4D_C",
+    "vehicleModel": "Urban",
+    "inputIdentifier": "urbino",
+    "mapName": "Hamburg"
+  },
+  "structureFingerprint": "6960dedacaf96fc28991eec93fb0621cb40af09a3c58f6ccdaa2c279385a01a1",
+  "sampleCount": 568,
+  "topLevelSchema": [
+    "ActiveRadioChannel:string",
+    "ActorName:string",
+    "AllLamps:object",
+    "AllowedSpeed:string",
+    "Brake:number",
+    "BusLogic:object",
+    "Buttons:array",
+    "CruiseControlActive:string",
+    "CurrentFuel:string",
+    "DestinationDisplayActive:string",
+    "DirtIntensity:string",
+    "DisplayFuel:string",
+    "EngineStarted:boolean",
+    "EngineTemperature:string",
+    "FixingBrake:boolean",
+    "Gearbox:object",
+    "GearboxType:string",
+    "IdleRPM:number",
+    "IgnitionEnabled:string",
+    "IndicatorState:number",
+    "IndicatorValue:number",
+    "InputIdentifier:string",
+    "IsAtStop:string",
+    "IsOffroad:boolean",
+    "IsPlayerControlled:boolean",
+    "IsRadioPlaying:string",
+    "Load:number",
+    "Location:object",
+    "LowFuelWarning:boolean",
+    "LuggageDoorsOpen:string",
+    "Mass:number",
+    "MaxFuel:string",
+    "MaxRPM:number",
+    "MissingFields:array",
+    "NumOccupiedSeats:string",
+    "NumSeats:string",
+    "PassengerDoorsOpen:string",
+    "RPM:number",
+    "Rotation:object",
+    "Speed:number",
+    "Steering:number",
+    "Throttle:number",
+    "UMG:object",
+    "VehicleModel:string",
+    "WarningLights:boolean",
+    "Wheels:array",
+    "WiperLevel:string",
+    "doors:array"
+  ],
+  "buttons": [
+    {
+      "name": "1 Euro",
+      "actions": [
+        "Coins100"
+      ],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "10 Cent",
+      "actions": [
+        "Coins10"
+      ],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "15 Cent",
+      "actions": [
+        "Coins15"
+      ],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "2 Euro",
+      "actions": [
+        "Coins200"
+      ],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "20 Cent",
+      "actions": [
+        "Coins20"
+      ],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "30 Cent",
+      "actions": [
+        "Coins30"
+      ],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "4 Euro",
+      "actions": [
+        "Coins400"
+      ],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "5 Cent",
+      "actions": [
+        "Coins5"
+      ],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "50 Cent",
+      "actions": [
+        "Coins50"
+      ],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "6 Euro",
+      "actions": [
+        "Coins600"
+      ],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "60 Cent",
+      "actions": [
+        "Coins60"
+      ],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "8 Euro",
+      "actions": [
+        "Coins800"
+      ],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Air Condition",
+      "actions": [
+        "ToggleAirCondition"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Air Condition Temperature",
+      "actions": [
+        "AirconditionPlus",
+        "AirconditionMinus"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "AirCon Airflow",
+      "actions": [
+        "AirCon AirflowFakeLeft",
+        "AirCon AirflowFakeRight"
+      ],
+      "declaredStates": [
+        "Airflow 1",
+        "Airflow 2",
+        "Airflow 3",
+        "Airflow 4"
+      ],
+      "observedStates": [
+        "Airflow 2"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "AirCon Colder",
+      "actions": [
+        "AirconditionMinus"
+      ],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Aircon Mode 1",
+      "actions": [],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Aircon Mode 2",
+      "actions": [],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "AirCon Warmer",
+      "actions": [
+        "AirconditionPlus"
+      ],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "AtronHolderSled",
+      "actions": [],
+      "declaredStates": [],
+      "observedStates": [
+        "None"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Automatic Door Closing",
+      "actions": [
+        "PreventRearAuto"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Automatic Kneeling",
+      "actions": [
+        "toggleAutoKneeling"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Boardcomputer",
+      "actions": [
+        "Select Boardcomputer"
+      ],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Button08",
+      "actions": [],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Cash Money",
+      "actions": [
+        "Take Cash Money"
+      ],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Door 1",
+      "actions": [
+        "DoorFrontOpenClose"
+      ],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "On",
+        "Off"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Door 2",
+      "actions": [
+        "DoorMiddleOpenClose"
+      ],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off",
+        "On"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Door 3",
+      "actions": [
+        "DoorRearOpenClose"
+      ],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off",
+        "On"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Door 4",
+      "actions": [
+        "DoorFourthOpenClose"
+      ],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off",
+        "On"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Door Button",
+      "actions": [],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Door Clearance",
+      "actions": [
+        "ToggleDoorClearance"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Door Lock",
+      "actions": [
+        "FakeDoorWingLockOff",
+        "FakeDoorWingLockLeft",
+        "FakeDoorWingLockRight"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary",
+        "Tertiary"
+      ],
+      "observedStates": [
+        "Primary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Door Lock Left",
+      "actions": [
+        "LockLeftDoor"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Door Lock Right",
+      "actions": [
+        "LockRightDoor"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Driver Door",
+      "actions": [],
+      "declaredStates": [],
+      "observedStates": [
+        "None"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Driver Door Lock",
+      "actions": [
+        "DriverDoorLock"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Driver Fan Speed",
+      "actions": [],
+      "declaredStates": [],
+      "observedStates": [
+        "None"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Driver Light",
+      "actions": [
+        "ToggleDriversLight"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Driver Monitor",
+      "actions": [
+        "SwitchCamera"
+      ],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Driver Temperature",
+      "actions": [],
+      "declaredStates": [],
+      "observedStates": [
+        "None"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Driver Window",
+      "actions": [
+        "DriverWindowClose",
+        "DriverWindowOpen"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Fake Ignition",
+      "actions": [
+        "MotorStartStop"
+      ],
+      "declaredStates": [
+        "Start",
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off",
+        "On",
+        "Start"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Front Fog Light",
+      "actions": [
+        "ToggleFogLight"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Gear Drive",
+      "actions": [
+        "SetGearD"
+      ],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Gear Neutral",
+      "actions": [
+        "SetGearN"
+      ],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Gear Reverse",
+      "actions": [
+        "SetGearR"
+      ],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Gear Selector",
+      "actions": [
+        "GearDown",
+        "GearUp"
+      ],
+      "declaredStates": [
+        "Drive",
+        "Neutral",
+        "Reverse"
+      ],
+      "observedStates": [
+        "Neutral",
+        "Drive",
+        "Reverse"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Headlight",
+      "actions": [
+        "ToggleLightSwitch"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "High Beam",
+      "actions": [
+        "ToggleTravellerLights"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Hill Holder",
+      "actions": [],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Horn",
+      "actions": [
+        "Horn"
+      ],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Indicator",
+      "actions": [
+        "IndicatorDown",
+        "IndicatorUp"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary",
+        "Tertiary"
+      ],
+      "observedStates": [
+        "Primary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Interior Light",
+      "actions": [
+        "TogglePassengersLight"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Interior Light Dim",
+      "actions": [
+        "INTLightDim"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Interior Light Full",
+      "actions": [
+        "INTLightFull"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Interior Light Left",
+      "actions": [
+        "INTLightLeftOnly"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Interior Light Right",
+      "actions": [
+        "INTLightRightOnly"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Kneeling",
+      "actions": [
+        "KneelDown",
+        "KneelUp"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Lifting",
+      "actions": [
+        "LiftDown",
+        "LiftUp"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Light Switch",
+      "actions": [
+        "Lightswitch",
+        "LightSwitchDownFake",
+        "LightSwitchUpFake"
+      ],
+      "declaredStates": [
+        "Off",
+        "Parking Lights",
+        "Headlights"
+      ],
+      "observedStates": [
+        "Off",
+        "Parking Lights",
+        "Headlights"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Main Light",
+      "actions": [
+        "ToggleMainLight"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Manual Shade",
+      "actions": [
+        "WindowShadeSideUp",
+        "WindowShadeSideDown"
+      ],
+      "declaredStates": [],
+      "observedStates": [
+        "None"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Mirror Heating",
+      "actions": [],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "PANTOGRAPH",
+      "actions": [
+        "Deactivate Pantograph",
+        "Activate Pantograph"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Parking Brake",
+      "actions": [
+        "FixingBrake"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Rear Fog Light",
+      "actions": [
+        "ToggleFogLightRear"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Reset Lifting",
+      "actions": [
+        "LiftReset_ButtonReset",
+        "LiftReset"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Stop Brake",
+      "actions": [
+        "StopBrakeOnOff"
+      ],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "TractionControl",
+      "actions": [
+        "ToggleASRThreshold"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "TravellerLights",
+      "actions": [
+        "High Beam Flasher On"
+      ],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "USB Clearance",
+      "actions": [
+        "ToggleUSB"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "ValveReset",
+      "actions": [],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Vent Left",
+      "actions": [],
+      "declaredStates": [],
+      "observedStates": [
+        "None"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Vent Right",
+      "actions": [],
+      "declaredStates": [],
+      "observedStates": [
+        "None"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Warning Light",
+      "actions": [
+        "ToggleWarningLights"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Wheelchair Request",
+      "actions": [
+        "WheelchairRequest"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Window Heating",
+      "actions": [],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Window Shade",
+      "actions": [
+        "WindowShadeUp",
+        "WindowShadeDown"
+      ],
+      "declaredStates": [
+        "Primary",
+        "Secondary"
+      ],
+      "observedStates": [
+        "Primary"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Window Shade Down",
+      "actions": [
+        "WindowShadeDown"
+      ],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Window Shade Up",
+      "actions": [
+        "WindowShadeUp"
+      ],
+      "declaredStates": [
+        "On",
+        "Off"
+      ],
+      "observedStates": [
+        "Off"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    },
+    {
+      "name": "Wiper",
+      "actions": [
+        "WiperDown",
+        "WiperUp"
+      ],
+      "declaredStates": [
+        "Fast",
+        "On",
+        "interval",
+        "Off"
+      ],
+      "observedStates": [
+        "Off",
+        "interval"
+      ],
+      "observedValues": [],
+      "stateTypes": [
+        "string"
+      ],
+      "valueTypes": []
+    }
+  ],
+  "lamps": [
+    {
+      "name": "ButtonLight Door 1",
+      "observedValues": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "ButtonLight Door 2",
+      "observedValues": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "ButtonLight Door 3",
+      "observedValues": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "ButtonLight Door 4",
+      "observedValues": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "CameraButtonLED",
+      "observedValues": [
+        0
+      ]
+    },
+    {
+      "name": "Dashboard Brake Assist",
+      "observedValues": [
+        0
+      ]
+    },
+    {
+      "name": "Dashboard Differential",
+      "observedValues": [
+        0
+      ]
+    },
+    {
+      "name": "Dashboard Door 2",
+      "observedValues": [
+        0
+      ]
+    },
+    {
+      "name": "Dashboard Engine",
+      "observedValues": [
+        0
+      ]
+    },
+    {
+      "name": "Dashboard Fixing Brake",
+      "observedValues": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "Dashboard Fog Light",
+      "observedValues": [
+        0
+      ]
+    },
+    {
+      "name": "Dashboard Indicator Right",
+      "observedValues": [
+        0
+      ]
+    },
+    {
+      "name": "Dashboard Lifting",
+      "observedValues": [
+        0
+      ]
+    },
+    {
+      "name": "Dashboard Load Transfer",
+      "observedValues": [
+        0
+      ]
+    },
+    {
+      "name": "Dashboard Retarder",
+      "observedValues": [
+        0
+      ]
+    },
+    {
+      "name": "Dashboard Seatbelts",
+      "observedValues": [
+        0
+      ]
+    },
+    {
+      "name": "Dashboard Turning",
+      "observedValues": [
+        0
+      ]
+    },
+    {
+      "name": "DB Dot",
+      "observedValues": [
+        0
+      ]
+    },
+    {
+      "name": "DB Parkbrake",
+      "observedValues": [
+        0
+      ]
+    },
+    {
+      "name": "DB Stop Request",
+      "observedValues": [
+        0
+      ]
+    },
+    {
+      "name": "DB Warning Light",
+      "observedValues": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "Default Emissive",
+      "observedValues": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "Default Emissive Materials",
+      "observedValues": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "DoorClearanceButton",
+      "observedValues": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "Fourth Door Light Ext",
+      "observedValues": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "FourthDoorRequest",
+      "observedValues": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "LED Stop Brake",
+      "observedValues": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "LED Warning",
+      "observedValues": [
+        0,
+        2
+      ]
+    },
+    {
+      "name": "Light Brake",
+      "observedValues": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "Light Daytime Left",
+      "observedValues": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "Light Daytime Right",
+      "observedValues": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "Light Door 1",
+      "observedValues": [
+        0.5,
+        1,
+        0
+      ]
+    },
+    {
+      "name": "Light Door 2",
+      "observedValues": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "Light Door 3",
+      "observedValues": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "Light Door 4",
+      "observedValues": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "Light Driver",
+      "observedValues": [
+        0
+      ]
+    },
+    {
+      "name": "Light Flasher",
+      "observedValues": [
+        0
+      ]
+    },
+    {
+      "name": "Light Front Fog",
+      "observedValues": [
+        0
+      ]
+    },
+    {
+      "name": "Light Headlight",
+      "observedValues": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "Light Indicator Left",
+      "observedValues": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "Light Indicator Right",
+      "observedValues": [
+        0,
+        3
+      ]
+    },
+    {
+      "name": "Light License Plate",
+      "observedValues": [
+        0,
+        10
+      ]
+    },
+    {
+      "name": "Light Main",
+      "observedValues": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "Light Parking",
+      "observedValues": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "Light Rear Fog",
+      "observedValues": [
+        0
+      ]
+    },
+    {
+      "name": "Light Reverse",
+      "observedValues": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "Light Travelling",
+      "observedValues": [
+        0
+      ]
+    },
+    {
+      "name": "LightOnOff",
+      "observedValues": [
+        0
+      ]
+    },
+    {
+      "name": "Passenger Lights",
+      "observedValues": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "Passenger Lights Left",
+      "observedValues": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "Passenger Lights Right",
+      "observedValues": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "Second Door Light Ext",
+      "observedValues": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "SecondDoorRequest",
+      "observedValues": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "Third Door Light Ext",
+      "observedValues": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "ThirdDoorRequest",
+      "observedValues": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "USB_Clearance",
+      "observedValues": [
+        0
+      ]
+    }
+  ],
+  "doorSchema": [
+    "[].Index:string",
+    "[].Name:string",
+    "[].Open:string",
+    "[].Progress:string",
+    "[].StopRequest:string",
+    "[]:object"
+  ],
+  "umgSchema": [
+    "Boardcomputer:string",
+    "Navigation:string",
+    "driverdisplay:string",
+    "driverdisplayfull:string"
+  ],
+  "busLogicSchema": [
+    "Asset:string"
+  ]
+}

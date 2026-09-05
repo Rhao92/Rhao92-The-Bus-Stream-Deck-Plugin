@@ -1,5 +1,6 @@
 import type { VehicleTelemetry } from "./telemetry";
-import { readVehicleButtonState } from "./vehicle-buttons";
+import { findVehicleButton, readVehicleButtonState } from "./vehicle-buttons";
+import { vehicleIdentityContains } from "./vehicle-identity";
 
 export type GearPosition = "D" | "N" | "R";
 
@@ -8,6 +9,57 @@ export const GEAR_EVENTS: Readonly<Record<GearPosition, string>> = {
   N: "SetGearN",
   R: "SetGearR"
 };
+
+// Live am Ebusco 2.2 ueber die offizielle lokale TML-API bestaetigt:
+// GearUp bewegt in Richtung D, GearDown in Richtung R.
+const EBUSCO_GEAR_ORDER: readonly GearPosition[] = ["D", "N", "R"];
+
+function listedGearAction(
+  vehicle: VehicleTelemetry | undefined,
+  eventName: string
+): string | undefined {
+  return findVehicleButton(vehicle, "Gear Selector")?.Actions?.find(
+    (action) => action.trim().toLowerCase() === eventName.toLowerCase()
+  );
+}
+
+/**
+ * Erzeugt ausschließlich aus den vom konkreten Bus gemeldeten Gang-Events
+ * eine Befehlsfolge. Der Ebusco besitzt kein SetGearN und reagierte im
+ * Praxistest nicht auf seine beiden direkten SetGear-Events. Seine echte
+ * Up/Down-Schaltung wird deshalb relativ vom bestätigten Ist-Gang aus bedient.
+ */
+export function resolveGearCommand(
+  vehicle: VehicleTelemetry | undefined,
+  current: GearPosition,
+  target: GearPosition
+): string[] | undefined {
+  if (current === target) {
+    return [];
+  }
+
+  if (vehicleIdentityContains(vehicle, "ebusco")) {
+    const currentIndex = EBUSCO_GEAR_ORDER.indexOf(current);
+    const targetIndex = EBUSCO_GEAR_ORDER.indexOf(target);
+    const difference = targetIndex - currentIndex;
+    const eventName = listedGearAction(
+      vehicle,
+      difference > 0 ? "GearDown" : "GearUp"
+    );
+
+    if (!eventName || difference === 0) {
+      return undefined;
+    }
+
+    return Array.from(
+      { length: Math.abs(difference) },
+      () => eventName
+    );
+  }
+
+  const direct = listedGearAction(vehicle, GEAR_EVENTS[target]);
+  return [direct ?? GEAR_EVENTS[target]];
+}
 
 const TELEMETRY_GAP_GRACE_MS = 900;
 const CANDIDATE_WINDOW_MS = 700;
@@ -101,7 +153,15 @@ export class GearStateResolver {
     }
 
     const { direct, button } = readGearSources(vehicle);
-    const observed = direct ?? button;
+
+    // Beim Urbino meldet Gearbox.CurrentSelector in Neutral dauerhaft "R",
+    // waehrend der offizielle Gear-Selector-Button korrekt "Neutral" liefert.
+    // Nur fuer diese live bestaetigte Fahrzeugfamilie hat daher der
+    // Buttonzustand Vorrang; alle bisherigen Fahrzeuge behalten die bewaehrte
+    // direkte Getriebequelle.
+    const observed = vehicleIdentityContains(vehicle, "urbino")
+      ? button ?? direct
+      : direct ?? button;
 
     if (observed === undefined) {
       return this.lastConfirmed !== undefined

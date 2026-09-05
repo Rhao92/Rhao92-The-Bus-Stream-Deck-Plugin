@@ -1,7 +1,7 @@
 {
   "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
   "Name": "Rhao92's The Bus Stream Deck Plugin",
-  "Version": "2.16.0.21",
+  "Version": "2.17.0.0",
   "Author": "Rhao92",
   "Actions": [
     {
@@ -59,7 +59,7 @@
       "Name": "Fahrplan · Button",
       "UUID": "de.rhao92.thebus-telemetry-interface.timetable-button",
       "Icon": "imgs/action-list/key-timetable",
-      "Tooltip": "Eine gemeinsame Fahrplan-Taste für Haltestelle, Ankunft, Abfahrt, Abweichung, Ingame-Zeit oder Status.",
+      "Tooltip": "Eine gemeinsame Fahrplan-Taste für Haltestelle, Ankunft, Abfahrt, Abweichung, Ingame-Zeit, Status oder Haltewunsch.",
       "Controllers": [
         "Keypad"
       ],
@@ -79,6 +79,7 @@
       "Controllers": [
         "Keypad"
       ],
+      "VisibleInActionsList": false,
       "States": [
         {
           "Image": "imgs/actions/stop-request/offline"
@@ -239,13 +240,14 @@
       "UserTitleEnabled": false
     },
     {
-      "Name": "Fahrzeug · Geschwindigkeit",
+      "Name": "Fahrzeug · Anzeige",
       "UUID": "de.rhao92.thebus-telemetry-interface.vehicle-speed",
       "Icon": "imgs/action-list/key-speed",
-      "Tooltip": "Zeigt die aktuelle Geschwindigkeit: bis Limit weiß, +1 bis +4 gelb, ab +5 km/h rot.",
+      "Tooltip": "Eine konfigurierbare Taste für Geschwindigkeit, Tempolimit, Leistung beziehungsweise Fahrtverbrauch oder Akkustand.",
       "Controllers": [
         "Keypad"
       ],
+      "PropertyInspectorPath": "property-inspector/vehicle.html",
       "States": [
         {
           "Image": "imgs/actions/key-speed/offline"
@@ -261,6 +263,7 @@
       "Controllers": [
         "Keypad"
       ],
+      "VisibleInActionsList": false,
       "States": [
         {
           "Image": "imgs/actions/key-speed-limit/offline"
@@ -276,6 +279,7 @@
       "Controllers": [
         "Keypad"
       ],
+      "VisibleInActionsList": false,
       "States": [
         {
           "Image": "imgs/actions/key-power/offline"
@@ -291,6 +295,7 @@
       "Controllers": [
         "Keypad"
       ],
+      "VisibleInActionsList": false,
       "States": [
         {
           "Image": "imgs/actions/key-battery/offline"
@@ -341,10 +346,10 @@
       "UserTitleEnabled": false
     },
     {
-      "Name": "Türen · Türsteuerung",
+      "Name": "Türen · Steuerung",
       "UUID": "de.rhao92.thebus-telemetry-interface.door-control",
       "Icon": "imgs/action-list/all-doors",
-      "Tooltip": "Eine konfigurierbare Taste für alle Türen oder Tür 1 bis 4. Anzeige und Animation folgen der bestätigten Türtelemetrie.",
+      "Tooltip": "Eine konfigurierbare Taste für alle Türen, Tür 1 bis 4, Türfreigabe oder automatisches Türschließen. Die Anzeige folgt bestätigter Telemetrie.",
       "Controllers": [
         "Keypad"
       ],
@@ -364,6 +369,7 @@
       "Controllers": [
         "Keypad"
       ],
+      "VisibleInActionsList": false,
       "States": [
         {
           "Image": "imgs/actions/door-clearance/offline"
@@ -385,6 +391,7 @@
       "Controllers": [
         "Keypad"
       ],
+      "VisibleInActionsList": false,
       "States": [
         {
           "Image": "imgs/actions/automatic-door-closing/offline"
@@ -399,10 +406,10 @@
       "DisableAutomaticStates": true
     },
     {
-      "Name": "Fahrt · Gangwahl",
+      "Name": "Fahrt · Steuerung",
       "UUID": "de.rhao92.thebus-telemetry-interface.gear-selector",
       "Icon": "imgs/action-list/gear-drive",
-      "Tooltip": "Eine konfigurierbare Taste für D, N oder R. Der aktive Gang wird ausschließlich telemetriebasiert angezeigt.",
+      "Tooltip": "Eine gemeinsame konfigurierbare Taste für Gangwahl, Blinker, Warnblinker, Feststell- oder Haltestellenbremse, Retarder und Scheibenwischer. Anzeige und Bedienung bleiben vollständig telemetriebasiert.",
       "Controllers": [
         "Keypad"
       ],
@@ -423,6 +430,7 @@
         "Keypad"
       ],
       "PropertyInspectorPath": "property-inspector.html",
+      "VisibleInActionsList": false,
       "States": [
         {
           "Image": "imgs/actions/indicator-left/offline"
@@ -455,13 +463,15 @@
       "DisableAutomaticStates": true
     },
     {
-      "Name": "Fahrt · Feststellbremse",
+      "Name": "Fahrt · Bremsen",
       "UUID": "de.rhao92.thebus-telemetry-interface.parking-brake",
       "Icon": "imgs/action-list/parking-brake",
-      "Tooltip": "Schaltet die Feststellbremse. Die Anzeige folgt ausschließlich Parking Brake.State beziehungsweise FixingBrake.",
+      "Tooltip": "Konfigurierbare Taste für Feststell- oder Haltestellenbremse. Anzeige und Bedienung folgen ausschließlich bestätigter Fahrzeugtelemetrie.",
       "Controllers": [
         "Keypad"
       ],
+      "PropertyInspectorPath": "property-inspector.html",
+      "VisibleInActionsList": false,
       "States": [
         {
           "Image": "imgs/actions/parking-brake/offline"
@@ -484,6 +494,7 @@
         "Keypad"
       ],
       "PropertyInspectorPath": "property-inspector.html",
+      "VisibleInActionsList": false,
       "States": [
         {
           "Image": "imgs/actions/retarder/action"
@@ -515,6 +526,7 @@
         "Keypad"
       ],
       "PropertyInspectorPath": "property-inspector.html",
+      "VisibleInActionsList": false,
       "States": [
         {
           "Image": "imgs/actions/wiper/action"
@@ -582,7 +594,7 @@
       "Name": "Licht · Fahrgastraumlicht",
       "UUID": "de.rhao92.thebus-telemetry-interface.passenger-light-control",
       "Icon": "imgs/action-list/passenger-lights",
-      "Tooltip": "Eine konfigurierbare Taste zum Ein-/Ausschalten, Dimmen oder Aufhellen der Fahrgastraumbeleuchtung.",
+      "Tooltip": "Direkte Zielwahl für Aus oder Ein sowie – falls vom Fahrzeug bestätigt – Gedimmt oder Hell. Intern werden ausschließlich bestätigte Events und Zustände verwendet.",
       "Controllers": [
         "Keypad"
       ],
@@ -945,7 +957,7 @@
       "Name": "Licht · Fahrgastraum",
       "UUID": "de.rhao92.thebus-telemetry-interface.passenger-lights",
       "Icon": "imgs/actions/passenger-lights/action",
-      "Tooltip": "Schaltet die Fahrgastraumbeleuchtung ein oder aus und zeigt ausschließlich bestätigt Aus, Gedimmt oder Hell an.",
+      "Tooltip": "Schaltet je nach Fahrzeug Ein/Aus oder zur nächsten realen Lichtstufe weiter und zeigt ausschließlich bestätigte Zustände an.",
       "Controllers": [
         "Keypad"
       ],
@@ -970,7 +982,7 @@
       "Name": "Licht · Fahrgastraum dunkler",
       "UUID": "de.rhao92.thebus-telemetry-interface.passenger-lights-dim",
       "Icon": "imgs/actions/passenger-lights-dim/action",
-      "Tooltip": "Schaltet das Fahrgastraumlicht bei Bedarf ein und dimmt es; die Anzeige bleibt vollständig telemetriebasiert.",
+      "Tooltip": "Wählt die gedimmte Lichtstufe nur bei Fahrzeugen mit separat bestätigter Steuerung; die Anzeige bleibt telemetriebasiert.",
       "Controllers": [
         "Keypad"
       ],
@@ -995,7 +1007,7 @@
       "Name": "Licht · Fahrgastraum heller",
       "UUID": "de.rhao92.thebus-telemetry-interface.passenger-lights-bright",
       "Icon": "imgs/actions/passenger-lights-bright/action",
-      "Tooltip": "Schaltet das Fahrgastraumlicht bei Bedarf ein und erhöht die Helligkeit; die Anzeige bleibt vollständig telemetriebasiert.",
+      "Tooltip": "Wählt die helle Lichtstufe nur bei Fahrzeugen mit separat bestätigter Steuerung; die Anzeige bleibt telemetriebasiert.",
       "Controllers": [
         "Keypad"
       ],

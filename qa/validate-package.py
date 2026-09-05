@@ -21,9 +21,9 @@ def check(condition: bool, message: str) -> None:
 check(MANIFEST["Name"] == "Rhao92's The Bus Stream Deck Plugin", "Plugin-Name")
 check(MANIFEST["Category"] == MANIFEST["Name"], "Einheitliche Kategorie")
 check(MANIFEST["Author"] == "Rhao92", "Plugin-Autor")
-check(MANIFEST["Version"] == "2.16.0.21", "Manifest-Version")
+check(MANIFEST["Version"] == "2.17.0.0", "Manifest-Version")
 check(PACKAGE["name"] == "rhao92-the-bus-telemetry-interface", "package.json-Name")
-check(PACKAGE["version"] == "2.16.0", "package.json-Version")
+check(PACKAGE["version"] == "2.17.0", "package.json-Version")
 check(LOCK["version"] == PACKAGE["version"], "package-lock Hauptversion")
 check(LOCK["packages"][""]["version"] == PACKAGE["version"], "package-lock Rootversion")
 
@@ -76,7 +76,7 @@ for entry in actions:
             check_reference(controller["Feedback"]["Layout"])
 
 png_files = sorted((PLUGIN / "imgs" / "actions").rglob("*.png"))
-check(len(png_files) == 157, f"Erwartet 157 Action-PNGs, gefunden {len(png_files)}")
+check(len(png_files) == 161, f"Erwartet 161 Action-PNGs, gefunden {len(png_files)}")
 sizes: dict[tuple[int, int], int] = {}
 for path in png_files:
     with Image.open(path) as image:
@@ -87,8 +87,8 @@ for path in png_files:
 
 visible_actions = [entry for entry in actions if entry.get("VisibleInActionsList", True)]
 visible_icon_refs = {entry["Icon"] for entry in visible_actions}
-check(len(visible_actions) == 27, "Erwartet 27 sichtbare Actions")
-check(len(visible_icon_refs) == 25, "Erwartet 25 eindeutige sichtbare Listenicons")
+check(len(visible_actions) == 17, "Erwartet 17 sichtbare Actions")
+check(len(visible_icon_refs) == 15, "Erwartet 15 eindeutige sichtbare Listenicons")
 for reference in visible_icon_refs:
     for suffix, expected_size in (("", (20, 20)), ("@2x", (40, 40))):
         icon_path = PLUGIN / f"{reference}{suffix}.png"
@@ -196,7 +196,7 @@ for marker in [
     "Coins800",
     "Take Cash Money",
     "NUR ANZEIGE",
-    "2.16",
+    "2.17",
     "Navigation Blackbox",
 ]:
     check(marker in bundle, f"Runtime-Bundle-Marker fehlt: {marker}")

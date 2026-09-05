@@ -11,6 +11,12 @@ import {
 import { TelemetrySnapshot } from "../core/telemetry";
 import { isVehicleStationary } from "../core/vehicle-motion";
 import { readAutomaticKneelingState } from "../core/vehicle-controls";
+import {
+  manualKneelingRequiresHold,
+  resolveManualKneelingEvent
+} from "../core/vehicle-events";
+
+const SCANIA_KNEELING_HOLD_MS = 3_500;
 
 @action({ UUID: "de.rhao92.thebus-telemetry-interface.kneeling" })
 export class KneelingAction extends BaseAnimationAction {
@@ -19,6 +25,14 @@ export class KneelingAction extends BaseAnimationAction {
 
   protected override shouldAnimate(snapshot: TelemetrySnapshot): boolean {
     if (!snapshot.connected || !snapshot.vehicle) {
+      this.motion.stop();
+      return false;
+    }
+
+    if (
+      !resolveManualKneelingEvent(snapshot.vehicle, true)
+      || !resolveManualKneelingEvent(snapshot.vehicle, false)
+    ) {
       this.motion.stop();
       return false;
     }
@@ -34,6 +48,13 @@ export class KneelingAction extends BaseAnimationAction {
     animationFrame: AnimationFrame
   ): DisplayModel {
     if (!snapshot.connected || !snapshot.vehicle) {
+      return { state: 0 };
+    }
+
+    if (
+      !resolveManualKneelingEvent(snapshot.vehicle, true)
+      || !resolveManualKneelingEvent(snapshot.vehicle, false)
+    ) {
       return { state: 0 };
     }
 
@@ -90,11 +111,52 @@ export class KneelingAction extends BaseAnimationAction {
       return;
     }
 
-    const eventName = targetLowered ? "KneelDown" : "KneelUp";
+    const eventName = resolveManualKneelingEvent(
+      snapshot.vehicle,
+      targetLowered
+    );
+
+    if (!eventName) {
+      return;
+    }
     this.commandInFlight = true;
     this.motion.start(targetLowered, snapshot.vehicle);
 
     try {
+      if (manualKneelingRequiresHold(snapshot.vehicle)) {
+        const pressed = await this.pressEvent(eventName);
+
+        if (!pressed) {
+          this.motion.stop();
+          this.logWarning(`Event "${eventName}" konnte nicht gedrückt werden.`);
+          return;
+        }
+
+        this.refreshTelemetrySoon();
+        let released = false;
+
+        try {
+          await new Promise((resolve) => setTimeout(resolve, SCANIA_KNEELING_HOLD_MS));
+        } finally {
+          released = this.snapshot.vehicleId === snapshot.vehicleId
+            ? await this.releaseEvent(eventName)
+            : (this.telemetry.sendEventForVehicleDetached(
+              snapshot.vehicleId,
+              eventName,
+              "release"
+            ), true);
+        }
+
+        if (!released) {
+          this.motion.stop();
+          this.logWarning(`Event "${eventName}" konnte nicht losgelassen werden.`);
+          return;
+        }
+
+        this.refreshTelemetrySoon();
+        return;
+      }
+
       const sent = await this.sendEvent(eventName);
 
       if (!sent) {

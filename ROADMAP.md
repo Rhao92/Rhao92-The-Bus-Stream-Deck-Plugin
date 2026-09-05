@@ -1,7 +1,7 @@
 # Rhao92's The Bus Stream Deck Plugin – Product Roadmap
 
-This roadmap accompanies the stable `2.16.0` release (installer build
-`2.16.0.21`). Availability, planned work, long-term ideas, dependencies and
+This roadmap accompanies the stable `2.17.0` release (installer build
+`2.17.0.0`). Availability, planned work, long-term ideas, dependencies and
 blocked areas are deliberately kept separate.
 
 ---
@@ -19,14 +19,14 @@ blocked areas are deliberately kept separate.
 - **Nicht vorgesehen:** widerspricht den technischen oder qualitativen
   Grundsätzen des Projekts.
 
-### Aktueller Schwerpunkt – stabiler 2.16.0-Release
+### Aktueller Stand – stabiler 2.17.0-Release
 
-Der nächste stabile Produktstand ist für GitHub und den Elgato Marketplace
-vorgesehen. Beide Wege behalten dieselbe Plugin- und Action-Identität. GitHub
-bleibt zusätzlich die zentrale Stelle für Dokumentation, Downloads, Feedback
-und Fehlerberichte.
+Der stabile Produktstand wird zuerst über GitHub veröffentlicht. Die getrennte
+Marketplace-Fassung folgt nach Elgatos erneuter Prüfung. Beide Wege behalten
+dieselbe Plugin- und Action-Identität. GitHub bleibt zusätzlich die zentrale
+Stelle für Dokumentation, Downloads, Feedback und Fehlerberichte.
 
-Für `2.16.0` verfügbar:
+Für `2.17.0` verfügbar:
 
 - automatische deutsche und englische Oberfläche in einer Installation,
   einschließlich Action-Liste, Beschreibungen, Einstellungsfenstern,
@@ -51,15 +51,30 @@ Für `2.16.0` verfügbar:
 - größenkorrigierte farbige Plugin-, Kategorie- und Action-Listenicons für den
   GitHub-/Quellstand
 - stabile UUIDs, gespeicherte Einstellungen und Profilzuordnungen
+- vollständig erfasste offizielle Fahrzeugtelemetrie als versionierter
+  Kompatibilitätskatalog für MB eCitaro / eCityBus, Ebusco 2.2, Solaris
+  Urbino, MAN Lion's City Doppeldecker, Scania Citywide LF und VDL Citea
+  LLE 120 / LLE 127
+- additive fahrzeugspezifische Zuordnungen für Türen, Gangwahl,
+  Fahrgastraumlicht, Kneeling beziehungsweise Lifting, Klima und Bremsen;
+  fehlende oder wirkungslose Funktionen bleiben neutral oder blockiert
+- direkte Zielwahl für Gänge und bestätigte Lichtstufen, ohne die
+  fahrzeuginternen Mehrstufenschalter nachzubilden oder Zustände zu erfinden
+- zusätzliche Haltestellenbremse in der vorhandenen Bremsen-Action bei
+  Fahrzeugen mit echtem Steuerevent und Rückmeldung
+- übersichtlichere Actions-Liste mit 17 sichtbaren Sammel-Actions; alle 50
+  technischen Action-UUIDs, vorhandenen Profile und alte Belegungen bleiben
+  kompatibel
 
-Vor der Veröffentlichung noch erforderlich:
+Für die getrennte Marketplace-Fassung noch erforderlich:
 
-- endgültiger Funktionsumfang und vierteilige Installer-Version festlegen
-- markenneutrale, monochrome Marketplace-Icons und Produktgrafiken fertigstellen
-- GitHub- und Marketplace-Metadaten, Screenshots und Links finalisieren
-- Veröffentlichungspaket, Datenschutzprüfung und Release-Freigaben abschließen
-- Marketplace-Einreichung mit deaktivierter automatischer Veröffentlichung;
-  der spätere Go-live benötigt eine eigene Freigabe
+- kurzes Funktionsvideo mit gleichzeitig sichtbarem Spiel und
+  Stream-Deck-Oberfläche erstellen
+- Produktrevision mit dem Namen `The Bus Control Center`, neutralen
+  Listenicons und deaktivierter automatischer Veröffentlichung erneut
+  einreichen
+- Marketplace-Go-live erst nach Elgatos Freigabe und einer eigenen
+  Nutzerfreigabe auslösen
 
 ### Nächste Ausbaustufen
 
@@ -160,8 +175,8 @@ Vor der Veröffentlichung noch erforderlich:
   vollständige verbleibende Fahrtfolge.
 - **Statischer Routenkatalog:** benötigt Rechtsklärung; für Berlin fehlt eine
   gleichwertige normal lesbare Datenbasis.
-- **Marketplace-Veröffentlichung:** benötigt eigenständige markenneutrale
-  Medien, vollständige Metadaten und die Freigabe nach dem Elgato-Review.
+- **Marketplace-Veröffentlichung:** benötigt noch das angeforderte
+  Funktionsvideo, die erneute Elgato-Prüfung und eine eigene Go-live-Freigabe.
 
 ### Bewusst nicht vorgesehen
 
@@ -187,14 +202,14 @@ Vor der Veröffentlichung noch erforderlich:
 - **Blocked:** requires real game data, events, or external clearance.
 - **Not planned:** conflicts with the project's technical or quality rules.
 
-### Current focus – stable 2.16.0 release
+### Current state – stable 2.17.0 release
 
-The next stable product version is intended for GitHub and the Elgato
-Marketplace. Both channels retain the same plugin and action identities.
-GitHub also remains the central location for documentation, downloads,
-feedback, and issue reports.
+The stable product version is published through GitHub first. The separate
+Marketplace edition follows after Elgato's renewed review. Both channels
+retain the same plugin and action identities. GitHub also remains the central
+location for documentation, downloads, feedback, and issue reports.
 
-Available for `2.16.0`:
+Available for `2.17.0`:
 
 - automatic German and English UI in one installation, covering the action
   list, descriptions, Property Inspectors, runtime displays, full panels, and
@@ -219,15 +234,29 @@ Available for `2.16.0`:
 - correctly sized colored plugin, category, and action-list icons for the
   GitHub/source version
 - stable UUIDs, saved settings, and profile assignments
+- complete official vehicle-telemetry captures maintained as a versioned
+  compatibility catalogue for the MB eCitaro / eCityBus, Ebusco 2.2, Solaris
+  Urbino, MAN Lion's City double-decker, Scania Citywide LF, and VDL Citea
+  LLE 120 / LLE 127
+- additive vehicle-specific mappings for doors, gear selection, passenger
+  lighting, kneeling or lifting, climate, and brakes; missing or ineffective
+  functions remain neutral or blocked
+- direct target selection for gears and confirmed lighting levels without
+  imitating vehicle-internal multi-stage switches or inventing states
+- an additional stop-brake mode in the existing brake action on vehicles
+  that provide a genuine control event and feedback
+- a clearer actions list with 17 visible consolidated actions while all 50
+  technical action UUIDs, existing profiles, and old assignments remain
+  compatible
 
-Still required before publication:
+Still required for the separate Marketplace edition:
 
-- freeze the final feature scope and four-part installer version
-- complete brand-neutral monochrome Marketplace icons and product artwork
-- finalize GitHub and Marketplace metadata, screenshots, and links
-- complete the publication package, privacy review, and release approvals
-- submit to the Marketplace with automatic publication disabled; the later
-  go-live requires separate approval
+- record a short functionality video showing the game and Stream Deck UI at
+  the same time
+- resubmit the product revision as `The Bus Control Center`, with neutral
+  action-list icons and automatic publication disabled
+- trigger the Marketplace go-live only after Elgato approval and a separate
+  user authorization
 
 ### Next development stages
 
@@ -325,8 +354,8 @@ Still required before publication:
   complete remaining trip sequence.
 - **Static route catalogue:** requires legal clearance; an equivalent normally
   readable source for Berlin has not been identified.
-- **Marketplace publication:** requires independent brand-neutral media,
-  complete metadata, and approval after Elgato review.
+- **Marketplace publication:** still requires the requested functionality
+  video, Elgato's renewed review, and a separate go-live authorization.
 
 ### Deliberately not planned
 

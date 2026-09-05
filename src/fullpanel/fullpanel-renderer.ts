@@ -182,7 +182,7 @@ function timetable(
   ${metric(410, translateUi("deviation", language), view.deltaText, delta, true)}
   ${metric(558, translateUi("ingame_time", language), view.ingameTime, accent)}
   ${status}
-  <text x="789" y="12" text-anchor="end" font-family="Arial,Helvetica,sans-serif" font-size="5" font-weight="700" fill="#fff" fill-opacity=".28">2.16</text>`;
+  <text x="789" y="12" text-anchor="end" font-family="Arial,Helvetica,sans-serif" font-size="5" font-weight="700" fill="#fff" fill-opacity=".28">2.17</text>`;
 }
 
 function vehicle(view: FullpanelViewModel): string {
@@ -448,7 +448,7 @@ function navigation(model: RouteGuidanceModel | undefined, language: string): st
     <text x="744" y="82" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="900" fill="${predictionColor}">${escapeXml(predictedDelta)}</text>
     <text x="744" y="94" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="8" font-weight="800" letter-spacing=".25" fill="${predictionColor}">${escapeXml(confidence)}</text>
   </g>
-  <text x="789" y="12" text-anchor="end" font-family="Arial,Helvetica,sans-serif" font-size="5" font-weight="700" fill="#fff" fill-opacity=".28">2.16</text>`;
+  <text x="789" y="12" text-anchor="end" font-family="Arial,Helvetica,sans-serif" font-size="5" font-weight="700" fill="#fff" fill-opacity=".28">2.17</text>`;
 }
 
 function offline(language = getDisplayLanguage()): string {

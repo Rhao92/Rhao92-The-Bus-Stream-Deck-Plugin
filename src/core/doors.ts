@@ -6,6 +6,51 @@ export type DoorGroupState = DoorState | "mixed";
 const CLOSED_PROGRESS_MAX = 0.02;
 const OPEN_PROGRESS_MIN = 0.98;
 
+function normalizePhysicalDoorIndex(value: unknown): number | undefined {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  const namedIndexes: Record<string, number> = {
+    first: 0,
+    second: 1,
+    third: 2,
+    fourth: 3
+  };
+
+  if (normalized in namedIndexes) {
+    return namedIndexes[normalized];
+  }
+
+  const numeric = Number(normalized);
+
+  return Number.isInteger(numeric) && numeric >= 1 && numeric <= 4
+    ? numeric - 1
+    : undefined;
+}
+
+function orderDoorsByPhysicalIndex(
+  doors: readonly DoorTelemetry[]
+): DoorTelemetry[] {
+  const indexed = doors.map((door, originalIndex) => ({
+    door,
+    originalIndex,
+    physicalIndex: normalizePhysicalDoorIndex(door.Index)
+  }));
+  const physicalIndexes = indexed.map(({ physicalIndex }) => physicalIndex);
+
+  if (
+    physicalIndexes.some((index) => index === undefined)
+    || new Set(physicalIndexes).size !== indexed.length
+  ) {
+    return [...doors];
+  }
+
+  return indexed
+    .sort((left, right) => (
+      (left.physicalIndex ?? left.originalIndex)
+      - (right.physicalIndex ?? right.originalIndex)
+    ))
+    .map(({ door }) => door);
+}
+
 function normalizeProgress(value: unknown): number | undefined {
   if (value === undefined || value === null || value === "") {
     return undefined;
@@ -118,7 +163,12 @@ export function readAvailableDoorStates(
     return undefined;
   }
 
-  const doors = vehicle.doors.slice(0, maxDoors);
+  // Einige Fahrzeuge, derzeit insbesondere der MAN-Doppeldecker, liefern
+  // doors[] nicht in physischer Reihenfolge. Das ebenfalls gelieferte Index-
+  // Feld benennt die echte Position eindeutig (First/Second/Third/Fourth).
+  // Nur bei einer vollständigen, eindeutigen Zuordnung wird neu sortiert;
+  // ältere Fahrzeuge ohne Index-Metadaten behalten unverändert ihre Reihenfolge.
+  const doors = orderDoorsByPhysicalIndex(vehicle.doors.slice(0, maxDoors));
 
   if (doors.length === 0) {
     return undefined;

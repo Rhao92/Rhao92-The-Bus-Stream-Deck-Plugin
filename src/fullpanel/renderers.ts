@@ -95,7 +95,7 @@ function singleFrame(content, palette) {
   <rect x="3" y="3" width="194" height="94" rx="10" fill="${palette.tint}" stroke="${palette.accent}" stroke-width="2" filter="url(#panel)"/>
   <rect x="6" y="6" width="188" height="88" rx="8" fill="#020604" fill-opacity=".72" stroke="#fff" stroke-opacity=".05"/>
   ${content}
-  <text x="192" y="94" text-anchor="end" font-family="Arial,Helvetica,sans-serif" font-size="4.5" font-weight="700" fill="#fff" fill-opacity=".25">2.16</text>
+  <text x="192" y="94" text-anchor="end" font-family="Arial,Helvetica,sans-serif" font-size="4.5" font-weight="700" fill="#fff" fill-opacity=".25">2.17</text>
   </svg>`;
 }
 
@@ -313,7 +313,7 @@ function timetableKeypadFrame(content, palette) {
   <rect x="4" y="4" width="136" height="136" rx="19" fill="${palette.tint}" stroke="${palette.accent}" stroke-width="3" filter="url(#keyGlow)"/>
   <rect x="8" y="8" width="128" height="128" rx="16" fill="#020604" fill-opacity=".82" stroke="#fff" stroke-opacity=".07"/>
   ${content}
-  <text x="135" y="136" text-anchor="end" font-family="Arial,Helvetica,sans-serif" font-size="4" font-weight="700" fill="#fff" fill-opacity=".22">2.16</text>
+  <text x="135" y="136" text-anchor="end" font-family="Arial,Helvetica,sans-serif" font-size="4" font-weight="700" fill="#fff" fill-opacity=".22">2.17</text>
   </svg>`;
 }
 
@@ -427,6 +427,9 @@ export function renderTimetableKeypad(view, kind, bright = false) {
         : keypadMetric(translateUi("status", language), value, palette.accent, Number(fontSize.toFixed(1)));
       break;
     }
+    case "stop-request":
+      content = keypadStopStatus(view?.stopRequest ? bright : false, language);
+      break;
     default:
       throw new Error(`Unbekannter Fahrplan-Button: ${kind}`);
   }

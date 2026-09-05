@@ -85,7 +85,7 @@ const preview = `
     <image href="${panelVehicle}" x="160" y="352" width="960" height="120"/>
   </g>
   <g filter="url(#shadow)">${keyMarkup}</g>
-  <text x="640" y="684" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="700" fill="#c8d3dc">Version 2.16.0 · Free for Elgato Stream Deck and Stream Deck Mobile</text>
+  <text x="640" y="684" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="16" font-weight="700" fill="#c8d3dc">Version 2.17.0 · Free for Elgato Stream Deck and Stream Deck Mobile</text>
 </svg>`;
 
 await sharp(Buffer.from(preview))
